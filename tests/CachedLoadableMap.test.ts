@@ -1,38 +1,52 @@
 import { CachedLoadableMap } from "../src/CachedLoadableMap"
 
 describe("CachedLoadableMap", () => {
-    let cachedLoadableMap: CachedLoadableMap<string, string>
-    let mockLoadFunction: jest.Mock
+    let cachedLoadableMap: CachedLoadableMap<string, { _id: string, data: string }>
+    let mockLoadOneFunction: jest.Mock
     let mockLoadAllFunction: jest.Mock
+    const expiryInterval = 1000 // 1 second for testing
 
     beforeEach(() => {
-        mockLoadFunction = jest.fn(key => Promise.resolve(`Value for ${key}`))
-        mockLoadAllFunction = jest.fn(() => Promise.resolve(new Map([
-            ["key1", "value1"],
-            ["key2", "value2"]
+        mockLoadOneFunction = jest.fn().mockImplementation((key) => Promise.resolve({
+            _id: key,
+            data: `Data for ${key}`
+        }))
+        mockLoadAllFunction = jest.fn().mockImplementation(() => Promise.resolve(new Map([
+            ["key1", {_id: "key1", data: "value1"}],
+            ["key2", {_id: "key2", data: "value2"}]
         ])))
-        cachedLoadableMap = new CachedLoadableMap(mockLoadFunction, mockLoadAllFunction, 1000)
+        cachedLoadableMap = new CachedLoadableMap({
+            loadOne: mockLoadOneFunction,
+            loadAll: mockLoadAllFunction,
+            expiryInterval,
+            keyProperty: "_id"
+        })
     })
 
-    test("should retrieve item from cache if not expired", async () => {
-        await cachedLoadableMap.set("key1", "cachedValue1")
+    test("should retrieve item and set expiry", async () => {
         const item = await cachedLoadableMap.get("key1")
-        expect(item).toBe("cachedValue1")
-        expect(mockLoadFunction).not.toHaveBeenCalledWith("key1")
+        expect(mockLoadOneFunction).toHaveBeenCalledWith("key1")
+        expect(item).toEqual({_id: "key1", data: "Data for key1"})
+        expect(cachedLoadableMap["expiryCache"].has("key1")).toBeTruthy()
+        expect(cachedLoadableMap["expiryCache"].get("key1")?.expiry).toBeGreaterThan(Date.now())
     })
 
-    test("should call load function if item is expired", async () => {
+    test("should call loadOne function again if item is expired", async () => {
         jest.useFakeTimers()
-        await cachedLoadableMap.set("key2", "cachedValue2")
-        jest.advanceTimersByTime(2000) // Advance time to expire the cache
         await cachedLoadableMap.get("key2")
-        expect(mockLoadFunction).toHaveBeenCalledWith("key2")
+        jest.advanceTimersByTime(expiryInterval + 100) // Advance time to expire the cache
+        await cachedLoadableMap.get("key2")
+        expect(mockLoadOneFunction).toHaveBeenCalledTimes(2)
         jest.useRealTimers()
     })
 
-    test("should load all items with loadAll function", async () => {
+    test("should load all items with getAll and set their expiry", async () => {
         const items = await cachedLoadableMap.getAll()
         expect(mockLoadAllFunction).toHaveBeenCalled()
         expect(items?.size).toBe(2)
+        expect(cachedLoadableMap["expiryCache"].get("key1")?.expiry).toBeGreaterThan(Date.now())
+        expect(cachedLoadableMap["expiryCache"].get("key2")?.expiry).toBeGreaterThan(Date.now())
     })
+
+    // Additional tests can be added as needed
 })
