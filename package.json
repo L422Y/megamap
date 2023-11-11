@@ -1,6 +1,6 @@
 {
   "name": "megamap",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Extended JavaScript Map with caching, loading, expiry features... and more",
   "main": "dist/index.js",
   "types": "types.d.ts",
