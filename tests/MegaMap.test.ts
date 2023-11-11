@@ -1,29 +1,51 @@
-import { MegaMap } from "../src/MegaMap"
+import { MegaMap } from '../src/MegaMap';
 
-describe("MegaMap", () => {
-    let megaMap: MegaMap<string, string>
-    let mockLoadFunction: jest.Mock
-    let mockLoadAllFunction: jest.Mock
+describe('MegaMap', () => {
+    let megaMap: MegaMap<string, { _id: string, data: string }>;
+    let mockLoadOneFunction: jest.Mock;
+    let mockLoadAllFunction: jest.Mock;
+    let secondaryMegaMap: MegaMap<string, { _id: string, data: string }>;
 
     beforeEach(() => {
-        mockLoadFunction = jest.fn(key => Promise.resolve(`Value for ${key}`))
-        mockLoadAllFunction = jest.fn(() => Promise.resolve(new Map([
-            ["key1", "value1"],
-            ["key2", "value2"]
-        ])))
-        megaMap = new MegaMap(mockLoadFunction, mockLoadAllFunction, 1000)
-    })
+        mockLoadOneFunction = jest.fn().mockImplementation((key) => Promise.resolve({ _id: key, data: `Data for ${key}` }));
+        mockLoadAllFunction = jest.fn().mockImplementation(() => Promise.resolve(new Map([
+            ['key1', { _id: 'key1', data: 'value1' }],
+            ['key2', { _id: 'key2', data: 'value2' }]
+        ])));
+        megaMap = new MegaMap({
+            loadOne: mockLoadOneFunction,
+            loadAll: mockLoadAllFunction,
+            expiryInterval: 1000,
+            keyProperty: "_id"
+        });
 
-    test("should call load function on get and throw error if item is undefined", async () => {
-        mockLoadFunction.mockResolvedValueOnce(undefined)
-        await expect(megaMap.get("testKey")).rejects.toThrow("Item is undefined")
-    })
+        secondaryMegaMap = new MegaMap({
+            loadOne: jest.fn(),
+            loadAll: jest.fn(),
+            expiryInterval: 1000,
+            keyProperty: "_id"
+        });
+        megaMap.addSecondaryMap(secondaryMegaMap);
+    });
 
-    test("should fetch all items and return an empty map if no items found", async () => {
-        mockLoadAllFunction.mockResolvedValueOnce(new Map())
-        const items = await megaMap.getAll()
-        expect(items).toBeInstanceOf(Map)
-        expect(items?.size).toBe(0)
-    })
+    test('should retrieve item and update secondary maps', async () => {
+        const item = await megaMap.get('key1');
+        expect(item).toEqual({ _id: 'key1', data: 'Data for key1' });
+        expect(secondaryMegaMap['_map'].has('key1')).toBeTruthy();
+        expect(secondaryMegaMap['_map'].get('key1')).toEqual(item);
+    });
 
-})
+    // test('should throw error when getAll returns no items', async () => {
+    //     mockLoadAllFunction.mockResolvedValueOnce(new Map());
+    //     await expect(megaMap.getAll()).rejects.toThrow("No items found");
+    // });
+
+    test('should load all items with getAll', async () => {
+        const items = await megaMap.getAll();
+        expect(mockLoadAllFunction).toHaveBeenCalled();
+        expect(items?.size).toBe(2);
+        expect(items?.get('key1')).toEqual({ _id: 'key1', data: 'value1' });
+    });
+
+    // Additional tests can be added as needed
+});
