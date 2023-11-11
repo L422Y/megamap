@@ -1,18 +1,23 @@
 import { LoadableMap } from "./LoadableMap"
 
-type CacheItem<V> = {
-    value: V | undefined,
-    expiry: number
+type CacheExpiry = {
+    expiry: number;
 };
 
-export class CachedLoadableMap<K, V> extends LoadableMap<K, V> {
-    private cache: Map<K, CacheItem<V | undefined>> = new Map<K, CacheItem<V | undefined>>()
+type CachedLoadableMapOptions<K, V> = {
+    loadOne: (key: K) => Promise<V | undefined>;
+    loadAll?: () => Promise<V[] | Map<K, V>>;
+    expiryInterval?: number;
+    keyProperty?: keyof V;
+};
 
-    constructor(
-        load: (key: K) => Promise<V | undefined>,
-        loadAll?: () => Promise<Map<K, V>>,
-        private expiryInterval?: number) {
-        super(load, loadAll)
+export class CachedLoadableMap<K, V extends Record<string, any>> extends LoadableMap<K, V> {
+    private expiryCache: Map<K, CacheExpiry> = new Map<K, CacheExpiry>()
+    private readonly expiryInterval?: number
+
+    constructor({loadOne, loadAll, expiryInterval, keyProperty = "_id" as keyof V}: CachedLoadableMapOptions<K, V>) {
+        super({loadOne, loadAll, keyProperty})
+        this.expiryInterval = expiryInterval
     }
 
     public async get(key: K): Promise<V | undefined> {
@@ -20,38 +25,54 @@ export class CachedLoadableMap<K, V> extends LoadableMap<K, V> {
             throw new Error("Key is undefined")
         }
 
-        const cacheItem = this.cache.get(key)
-        if (cacheItem?.expiry === -1 || cacheItem && ( Date.now() < cacheItem.expiry )) {
-            return cacheItem.value
+
+        const cacheExpiry = this.expiryCache.get(key)
+        const now = Date.now()
+        if (cacheExpiry) {
+            if (cacheExpiry.expiry === -1 || now < cacheExpiry.expiry) {
+                return super.get(key)
+            } else {
+                this.expiryCache.delete(key)
+                this.loadOne(key).then((result: V | undefined) => {
+                    if (result) {
+                        this.set(key, result)
+                    }
+                })
+            }
         }
 
-        return super.get(key).then((item: V | undefined) => {
-            this.cache.set(key, {
-                value: item,
-                expiry: this.expiryInterval ? Date.now() + this.expiryInterval : -1
-            })
-            return item
-        })
+        if (this.loading.has(key)) {
+            return this.loading.get(key)
+        }
+
+
+        const item = await super.get(key)
+        this.setExpiry(key, item)
+        return item
     }
 
-    public set(key: K, value: V | undefined): void {
-        this.cache.set(key, {
-            value,
-            expiry: this.expiryInterval ? Date.now() + this.expiryInterval : -1
-        })
+    public set(key: K, value: V) {
+        super.set(key, value)
+        this.setExpiry(key, value)
+        return this
     }
 
     public async getAll(): Promise<Map<K, V> | undefined> {
-        return super.getAll().then((items: Map<K, V> | undefined) => {
-            if (items) {
-                items.forEach((value, key) => {
-                    this.cache.set(key, {
-                        value,
-                        expiry: this.expiryInterval ? Date.now() + this.expiryInterval : -1
-                    })
-                })
-            }
-            return items
-        })
+        const items = await super.getAll()
+        if (items) {
+            items.forEach((_, key) => {
+                this.setExpiry(key, items.get(key))
+            })
+        }
+        return items
     }
+
+    private setExpiry(key: K, value: V | undefined): void {
+        if (value !== undefined) {
+            this.expiryCache.set(key, {
+                expiry: this.expiryInterval ? Date.now() + this.expiryInterval : -1
+            })
+        }
+    }
+
 }
