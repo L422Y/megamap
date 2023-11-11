@@ -7,7 +7,7 @@
   "scripts": {
     "test": "jest",
     "build": "tsc",
-    "prepublish": "npm run build"
+    "prepublish": "bun run build"
   },
   "repository": {
     "type": "git",
