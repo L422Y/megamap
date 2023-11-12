@@ -5,22 +5,23 @@ type CacheExpiry = {
 };
 
 type CachedLoadableMapOptions<K, V> = {
-    loadOne: (key: K) => Promise<V | undefined>;
-    loadAll?: () => Promise<V[] | Map<K, V>>;
+    loadOne: (key: string) => Promise<V | undefined>;
+    loadAll?: () => Promise<V[] | Map<string, V>>;
     expiryInterval?: number;
-    keyProperty?: keyof V;
+    keyProperty?: string;
 };
 
-export class CachedLoadableMap<K, V extends Record<string, any>> extends LoadableMap<K, V> {
-    private expiryCache: Map<K, CacheExpiry> = new Map<K, CacheExpiry>()
+export class CachedLoadableMap<K, V extends Record<string, any>> extends LoadableMap<string, V> {
+    readonly [Symbol.toStringTag]: string = "CachedLoadableMap"
+    private expiryCache: Map<string, CacheExpiry> = new Map<string, CacheExpiry>()
     private readonly expiryInterval?: number
 
-    constructor({loadOne, loadAll, expiryInterval, keyProperty = "_id" as keyof V}: CachedLoadableMapOptions<K, V>) {
-        super({loadOne, loadAll, keyProperty})
-        this.expiryInterval = expiryInterval
+    constructor(opts: CachedLoadableMapOptions<string, V>) {
+        super(opts)
+        this.expiryInterval = opts.expiryInterval
     }
 
-    public async get(key: K): Promise<V | undefined> {
+    public async get(key: string): Promise<V | undefined> {
         if (key === undefined) {
             throw new Error("Key is undefined")
         }
@@ -51,13 +52,35 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
         return item
     }
 
-    public set(key: K, value: V) {
+    public set(key: string, value: V) {
         super.set(key, value)
         this.setExpiry(key, value)
         return this
     }
 
-    public async getAll(): Promise<Map<K, V> | undefined> {
+    public async getBy(propName: string, value: any): Promise<V | undefined> {
+        const result = await super.getBy(propName, value)
+
+        if (result) {
+            this.setExpiry(result[this.keyProperty], result)
+        }
+        return result
+    }
+
+    delete(key: string): boolean {
+        this.expiryCache.delete(key)
+        return super.delete(key)
+    }
+
+    deleteBy(propName: string, value: any): boolean {
+        const result = super.deleteBy(propName, value)
+        if (result) {
+            this.expiryCache.delete(value)
+        }
+        return result
+    }
+
+    public async getAll(): Promise<Map<string, V> | undefined> {
         const items = await super.getAll()
         if (items) {
             items.forEach((_, key) => {
@@ -67,7 +90,7 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
         return items
     }
 
-    private setExpiry(key: K, value: V | undefined): void {
+    private setExpiry(key: string, value: V | undefined): void {
         if (value !== undefined) {
             this.expiryCache.set(key, {
                 expiry: this.expiryInterval ? Date.now() + this.expiryInterval : -1
