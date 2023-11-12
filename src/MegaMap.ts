@@ -1,6 +1,6 @@
 import { CachedLoadableMap } from "./CachedLoadableMap"
-import type { Ref, ShallowRef } from "vue"
-import { isRef, reactive, ref } from "vue"
+import type { Ref } from "vue"
+import { isRef, reactive, unref } from "vue"
 import Fuse from "fuse.js"
 
 interface MegaMapOptions<K, V> {
@@ -19,9 +19,8 @@ interface MegaMapOptions<K, V> {
 
 export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap<string, V> {
     readonly [Symbol.toStringTag]: string = "MegaMap"
-    _refInstance: ShallowRef<MegaMap<K, V>>
     protected _triggerRef?: Function
-    private readonly subLists: Record<string,Ref<V[]>>
+    private readonly subLists: Record<string, V[]>
     private secondaryMaps: Array<MegaMap<string, V> | Ref<MegaMap<string, V>>> = []
     private readonly _filter?: (item: V) => boolean
     private readonly _sort?: (item1: V, item2: V) => number
@@ -39,27 +38,20 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
         this.onUpdated = opts.onUpdated
 
         for (const filterKey in this._subListFilters) {
-            this.subLists[filterKey] = ref([] as V[])
+            this.subLists[filterKey] = []
         }
 
         this.getAll().then(() => {
             this.updateSubLists()
         })
-        this.notifyMapUpdated()
 
         if (this.onUpdated) {
-            this.onUpdated()
+            setTimeout(() => {
+                this.notifyMapUpdated()
+                this.onUpdated()
+            }, 0)
         }
     }
-
-    // static ReactiveMegaMap = (opts: MegaMapOptions<any, any>): ShallowRef<MegaMap<any, any>> => {
-    //     const megaMap = shallowRef(new MegaMap(opts))
-    //     megaMap.onUpdated = () => {
-    //         triggerRef(megaMap)
-    //         opts.onUpdated?.()
-    //     }
-    //     return megaMap
-    // }
 
     public async get(key: string): Promise<V | undefined> {
         return await super.get(key).then((result: V | undefined) => {
@@ -95,11 +87,7 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
 
     public async addSecondaryMap(map: MegaMap<string, V> | Ref<MegaMap<string, V>>) {
         this.secondaryMaps.push(map)
-        if (isRef(map)) {
-            await map.value.bulkAdd(Array.from(this._map.value.values()))
-        } else {
-            await map.bulkAdd(Array.from(this._map.value.values()))
-        }
+        await unref(map).value.bulkAdd(Array.from(this._map.value.values()))
     }
 
     public filterItems(criteria: (value: V) => boolean): V[] {
@@ -164,17 +152,13 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
 
     private updateSecondaryMaps(item: V) {
         this.secondaryMaps.forEach(map => {
-            if (isRef(map)) {
-                map.value.set(item[map.value.keyProperty], item)
-            } else if (map instanceof MegaMap) {
-                map.set(item[map.keyProperty], item)
-            }
+            unref(map).set(item[unref(map).keyProperty], item)
         })
     }
 
     private updateSubLists() {
         for (const [filterKey, filter] of Object.entries(this._subListFilters)) {
-            this.subLists[filterKey].value = [...this.values()].filter(filter)
+            this.subLists[filterKey] = [...this.values()].filter(filter)
         }
     }
 
@@ -187,7 +171,6 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
                 map.notifyMapUpdated()
             }
         })
-        console.log("notifyMapUpdated", this._refInstance)
         if (this.onUpdated) {
             super.onUpdated && super.onUpdated()
             this.onUpdated()
