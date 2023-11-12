@@ -1,30 +1,43 @@
+import { computed, Ref, ref } from "vue"
+
 export interface LoadableMapOptions<K, V> {
-    loadOne: (key: K) => Promise<V | undefined>,
-    loadAll?: () => Promise<V[] | Map<K, V>>,
-    keyProperty?: keyof V
+    loadOne: (key: string) => Promise<V | undefined>,
+    loadAll?: () => Promise<V[] | Map<string, V>>,
+    keyProperty?: string,
+    onUpdated?: () => void
 }
 
-export type WithKeyProperty<K extends string | number | symbol, V> = V & Record<K, any>;
+export type WithKeyProperty<K extends string | number | symbol, V> = V & Record<string, any>;
 
 export class LoadableMap<K, V extends Record<string, any>> {
-    keyProperty: keyof V = "_id" as keyof V
-    protected _map: Map<K, V> = new Map<K, V>()
-    protected loading: Map<K, Promise<V | undefined>> = new Map<K, Promise<V | undefined>>()
-    protected loadingAll: Promise<Map<K, V> | undefined> | undefined
-    protected readonly loadOne: (key: K) => Promise<V | undefined>
-    private readonly loadAll?: () => Promise<V[] | Map<K, V>>
+    readonly [Symbol.toStringTag]: string = "LoadableMap"
+    keyProperty: string
+    protected _map: Ref<Map<string, V>> = ref(new Map<string, V>())
+    computedValues = computed(() => this._map.values())
+    protected loading: Map<string, Promise<V | undefined>> = new Map<string, Promise<V | undefined>>()
+    protected loadingAll: Promise<Map<string, V> | undefined> | undefined
+    protected readonly loadOne: (key: string) => Promise<V | undefined>
+    private readonly loadAll?: () => Promise<V[] | Map<string, V>>
 
-    constructor({loadOne, loadAll, keyProperty}: LoadableMapOptions<K, V>) {
-        this.keyProperty = keyProperty as keyof V || "_id" as keyof V
-        this.loadOne = loadOne
-        this.loadAll = loadAll
+    constructor(opts: LoadableMapOptions<string, V>) {
+        this.keyProperty = opts.keyProperty || "_id"
+        this.loadOne = opts.loadOne
+        this.loadAll = opts.loadAll
+        this.onUpdated = opts.onUpdated
     }
 
     get size(): number {
-        return this._map.size
+        return this._map.value.size
     }
 
-    public async get(key: K): Promise<V | undefined> {
+    get value() {
+        return this
+    }
+
+    onUpdated: () => void = () => {
+    }
+
+    public async get(key: string): Promise<V | undefined> {
         if (key === undefined) {
             throw new Error("Key is undefined")
         }
@@ -33,8 +46,8 @@ export class LoadableMap<K, V extends Record<string, any>> {
             return this.loading.get(key)
         }
 
-        if (this._map.has(key)) {
-            return this._map.get(key)
+        if (this._map.value.has(key)) {
+            return this._map.value.get(key)
         }
 
         const result: V | undefined = await this.loadOne(key)
@@ -45,12 +58,15 @@ export class LoadableMap<K, V extends Record<string, any>> {
         return undefined
     }
 
-    set(key: K, value: V) {
-        this._map.set(key, value)
+    set(key: string, value: V) {
+        this._map.value.set(key, value)
+        if (this.onUpdated) {
+            this.onUpdated()
+        }
         return this
     }
 
-    public async getAll(): Promise<Map<K, V> | undefined> {
+    public async getAll(): Promise<Map<string, V> | undefined> {
         if (!this.loadAll) {
             throw new Error("Load all items function is not defined")
         }
@@ -59,7 +75,7 @@ export class LoadableMap<K, V extends Record<string, any>> {
             return this.loadingAll
         }
 
-        this.loadingAll = this.loadAll().then((result: V[] | Map<K, V>) => {
+        this.loadingAll = this.loadAll().then((result: V[] | Map<string, V>) => {
             this.loadingAll = undefined
             return this.processLoadResult(result)
         })
@@ -68,48 +84,76 @@ export class LoadableMap<K, V extends Record<string, any>> {
     }
 
     values(): IterableIterator<V> {
-        return this._map.values()
+        return this._map.value.values()
     }
 
-    keys(): IterableIterator<K> {
-        return this._map.keys()
+   // return this._map.value as Map<string, V>
+    mapRef(): Map<string, V> {
+        return this._map
     }
 
-    entries(): IterableIterator<[K, V]> {
-        return this._map.entries()
+
+    keys(): IterableIterator<string> {
+        return this._map.value.keys()
     }
 
-    [Symbol.iterator](): IterableIterator<[K, V]> {
-        return this._map.entries()
+    entries(): IterableIterator<[string, V]> {
+        return this._map.value.entries()
     }
 
-    forEach(callbackfn: (value: V, key: K, map: Map<K, V>) => void, thisArg?: any): void {
-        return this._map.forEach(callbackfn, thisArg)
+    [Symbol.iterator](): IterableIterator<[string, V]> {
+        return this._map.value.entries()
+    }
+
+    forEach(callbackfn: (value: V, key: string, map: Map<string, V>) => void, thisArg?: any): void {
+        return this._map.value.forEach(callbackfn, thisArg)
     }
 
     clear(): void {
-        return this._map.clear()
+        return this._map.value.clear()
     }
 
-    delete(key: K): boolean {
-        return this._map.delete(key)
+    delete(key: string): boolean {
+        return this._map.value.delete(key)
     }
 
-    has(key: K): boolean {
-        return this._map.has(key)
+    deleteBy(propName: string, value: any): boolean {
+        const item = [...this._map.value.values()].find((item) => item[propName] === value)
+        if (item) {
+            return this._map.value.delete(item[this.keyProperty])
+        }
+        return false
     }
 
-    private processLoadResult(result: V[] | Map<K, V>): Map<K, V> {
+    has(key: string): boolean {
+        return this._map.value.has(key)
+    }
+
+    async getBy(propName: string, value: any): Promise<V | undefined> {
+        const result = [...this._map.value.values()].find((item) => item[propName] === value)
+        if (!result) {
+            await this.get(value).then((item) => {
+                if (item) {
+                    return item
+                }
+            })
+        }
+        return result
+    }
+
+    private processLoadResult(result: V[] | Map<string, V>): Map<string, V> {
         if (result instanceof Map) {
             result.forEach((value, key) => {
-                this._map.set(key, value)
+                this._map.value.set(this.keyProperty, value)
             })
         } else {
             result.forEach((item: V) => {
-                this._map.set(item[this.keyProperty], item)
+                this._map.value.set(item[this.keyProperty], item)
             })
         }
-
-        return this._map
+        if (this.onUpdated) {
+            this.onUpdated()
+        }
+        return this._map.value
     }
 }
