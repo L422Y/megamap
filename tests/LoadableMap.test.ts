@@ -25,7 +25,7 @@ describe("LoadableMap", () => {
         const item = await loadableMap.get("key1")
         expect(mockLoadOneFunction).toHaveBeenCalledWith("key1")
         expect(item).toEqual({_id: "key1", data: "Data for key1"})
-        expect(loadableMap["_map"].has("key1")).toBeTruthy()
+        expect(loadableMap["_map"].value.has("key1")).toBeTruthy()
     })
 
     test("should return undefined for nonexistent key", async () => {
