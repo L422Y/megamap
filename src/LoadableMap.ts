@@ -37,6 +37,13 @@ export class LoadableMap<K, V extends Record<string, any>> {
     onUpdated: () => void = () => {
     }
 
+    public async load(key: string): Promise<V | undefined> {
+        const result: V | undefined = await this.loadOne(key)
+        if (result) {
+            return this.processLoadResult([result]).get(key)
+        }
+    }
+
     public async get(key: string): Promise<V | undefined> {
         if (key === undefined) {
             throw new Error("Key is undefined")
@@ -50,9 +57,9 @@ export class LoadableMap<K, V extends Record<string, any>> {
             return this._map.value.get(key)
         }
 
-        const result: V | undefined = await this.loadOne(key)
+        const result = await this.load(key)
         if (result) {
-            return this.processLoadResult([result]).get(key)
+            return result
         }
 
         return undefined
@@ -87,7 +94,7 @@ export class LoadableMap<K, V extends Record<string, any>> {
         return this._map.value.values()
     }
 
-   // return this._map.value as Map<string, V>
+    // return this._map.value as Map<string, V>
     mapRef(): Map<string, V> {
         return this._map.value
     }
