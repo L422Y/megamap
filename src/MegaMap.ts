@@ -1,6 +1,6 @@
 import { CachedLoadableMap } from "./CachedLoadableMap"
 import type { Ref, ShallowRef } from "vue"
-import { isRef, reactive, ref, triggerRef } from "vue"
+import { isRef, reactive, ref, shallowRef, triggerRef } from "vue"
 import Fuse from "fuse.js"
 
 interface MegaMapOptions<K, V> {
@@ -17,16 +17,17 @@ interface MegaMapOptions<K, V> {
 }
 
 
+
 export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap<string, V> {
     readonly [Symbol.toStringTag]: string = "MegaMap"
-    public readonly subLists: Record<string, V[]>
+    _refInstance: ShallowRef<MegaMap<K, V>>
     protected _triggerRef?: Function
+    private subLists: Record<string, V[]>
     private secondaryMaps: Array<MegaMap<string, V> | Ref<MegaMap<string, V>>> = []
     private readonly _filter?: (item: V) => boolean
     private readonly _sort?: (item1: V, item2: V) => number
     private readonly _searchableFields: string[]
     private readonly _subListFilters: Record<string, (item: V) => boolean>
-    private _refInstance: Ref<MegaMap<K, V>>
 
     constructor(opts: MegaMapOptions<string, V>) {
         super(opts)
@@ -35,7 +36,7 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
         this._sort = opts.sort
         this._searchableFields = opts.searchableFields ?? []
         this._subListFilters = opts.subListFilters || {}
-        this.subLists = {}
+        this.subLists = reactive({})
         this.onUpdated = opts.onUpdated
 
 
@@ -49,6 +50,7 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
 
         if (this.onUpdated) {
             setTimeout(() => {
+                this.notifyMapUpdated()
                 this.onUpdated()
             }, 0)
         }
@@ -73,7 +75,6 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
             if (result) {
                 this.updateSecondaryMaps(result)
                 this.updateSubLists()
-
             }
             return result
         })
@@ -106,7 +107,7 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
         if (isRef(map)) {
             await map.value.bulkAdd(Array.from(this._map.values()))
         } else {
-            await map.bulkAdd(Array.from(this._map.values()))
+            await map.bulkAdd(Array.from(this._map.value.values()))
         }
     }
 
@@ -182,8 +183,7 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
 
     private updateSubLists() {
         for (const [filterKey, filter] of Object.entries(this._subListFilters)) {
-            this.subLists[filterKey].value = [...this.values()].filter(filter)
-            triggerRef(this.subLists[filterKey])
+            this.subLists[filterKey] = [...this.values()].filter(filter)
         }
     }
 
@@ -196,9 +196,9 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
                 map.notifyMapUpdated()
             }
         })
-        triggerRef(this._refInstance)
+        console.log("notifyMapUpdated", this._refInstance)
         if (this.onUpdated) {
-            super.onUpdated()
+            super.onUpdated && super.onUpdated()
             this.onUpdated()
         }
     }
