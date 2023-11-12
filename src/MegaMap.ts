@@ -53,6 +53,16 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
         }
     }
 
+    public async load(key: string): Promise<V | undefined> {
+        return await super.load(key).then((result: V | undefined) => {
+            if (result) {
+                this.updateSecondaryMaps(result)
+                this.updateSubLists()
+            }
+            return result
+        })
+    }
+
     public async get(key: string): Promise<V | undefined> {
         return await super.get(key).then((result: V | undefined) => {
             if (result) {
