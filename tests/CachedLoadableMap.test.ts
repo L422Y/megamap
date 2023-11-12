@@ -11,10 +11,10 @@ describe("CachedLoadableMap", () => {
             _id: key,
             data: `Data for ${key}`
         }))
-        mockLoadAllFunction = jest.fn().mockImplementation(() => Promise.resolve(new Map([
-            ["key1", {_id: "key1", data: "value1"}],
-            ["key2", {_id: "key2", data: "value2"}]
-        ])))
+        mockLoadAllFunction = jest.fn().mockImplementation(() => Promise.resolve([
+            {_id: "key1", data: "value1"},
+            {_id: "key2", data: "value2"},
+        ]))
         cachedLoadableMap = new CachedLoadableMap({
             loadOne: mockLoadOneFunction,
             loadAll: mockLoadAllFunction,
