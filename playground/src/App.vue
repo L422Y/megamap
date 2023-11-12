@@ -1,11 +1,12 @@
 <template>
   <div>
     <h1>MegaMap Vue Component</h1>
-
-    <fieldset>
-      <legend>megaMap</legend>
+    <fieldset v-for="(list,key) of megaMap.subLists" :key="key">
+      <legend>{{ key.toLocaleUpperCase() }}</legend>
       <div>
-        {{ megaMap.mapRef() }}
+        <div v-for="item in list" :key="item._id">
+          {{ item.data }}
+        </div>
       </div>
     </fieldset>
 
@@ -14,13 +15,14 @@
 
 <script setup>
 
+import {MegaMap} from "megamap"
 
-import {MegaMap} from "../../dist/index"
-import {triggerRef} from "vue"
-import {ref} from "vue"
-
-const megaMap = ref(new MegaMap({
-  loadOne: key => Promise.resolve({_id: key, data: `Data for ${key}`, status: "active"}),
+const megaMap = new MegaMap({
+  loadOne: key => Promise.resolve({
+    _id: key,
+    data: `data: ${key}`,
+    status: ["active", "draft", "inactive"][Math.floor(Math.random() * 3)]
+  }),
   loadAll: () => Promise.resolve([
     {_id: "key1", data: "value1", status: "active"},
     {_id: "key2", data: "value2", status: "inactive"},
@@ -35,11 +37,13 @@ const megaMap = ref(new MegaMap({
     active: (item) => item.status === "active",
     inactive: (item) => item.status === "inactive",
     draft: (item) => item.status === "draft",
-  },
-  onUpdated: () => {
-    triggerRef(megaMap)
   }
-}))
+})
+
+
+setInterval(async () => {
+  await megaMap.get(`key${Math.floor(Math.random() * 1008) + 1}`)
+}, 1000)
 
 </script>
 
