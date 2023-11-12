@@ -21,7 +21,7 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
     readonly [Symbol.toStringTag]: string = "MegaMap"
     _refInstance: ShallowRef<MegaMap<K, V>>
     protected _triggerRef?: Function
-    private readonly subLists: Record<string, V[]>
+    private readonly subLists: Record<string,Ref<V[]>>
     private secondaryMaps: Array<MegaMap<string, V> | Ref<MegaMap<string, V>>> = []
     private readonly _filter?: (item: V) => boolean
     private readonly _sort?: (item1: V, item2: V) => number
@@ -39,7 +39,7 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
         this.onUpdated = opts.onUpdated
 
         for (const filterKey in this._subListFilters) {
-            this.subLists[filterKey] = ref([])
+            this.subLists[filterKey] = ref([] as V[])
         }
 
         this.getAll().then(() => {
@@ -50,11 +50,6 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
         if (this.onUpdated) {
             this.onUpdated()
         }
-    }
-
-    public getRefInstance(): MegaMap<K, V> {
-        if (!this._refInstance) this._refInstance = reactive(this)
-        return this._refInstance
     }
 
     // static ReactiveMegaMap = (opts: MegaMapOptions<any, any>): ShallowRef<MegaMap<any, any>> => {
@@ -101,7 +96,7 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
     public async addSecondaryMap(map: MegaMap<string, V> | Ref<MegaMap<string, V>>) {
         this.secondaryMaps.push(map)
         if (isRef(map)) {
-            await map.value.bulkAdd(Array.from(this._map.values()))
+            await map.value.bulkAdd(Array.from(this._map.value.values()))
         } else {
             await map.bulkAdd(Array.from(this._map.value.values()))
         }
@@ -179,7 +174,7 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
 
     private updateSubLists() {
         for (const [filterKey, filter] of Object.entries(this._subListFilters)) {
-            this.subLists[filterKey] = [...this.values()].filter(filter)
+            this.subLists[filterKey].value = [...this.values()].filter(filter)
         }
     }
 
