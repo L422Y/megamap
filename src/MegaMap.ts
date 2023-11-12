@@ -1,6 +1,6 @@
 import { CachedLoadableMap } from "./CachedLoadableMap"
 import type { Ref, ShallowRef } from "vue"
-import { isRef, reactive, ref, shallowRef, triggerRef } from "vue"
+import { isRef, reactive, ref } from "vue"
 import Fuse from "fuse.js"
 
 interface MegaMapOptions<K, V> {
@@ -17,12 +17,11 @@ interface MegaMapOptions<K, V> {
 }
 
 
-
 export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap<string, V> {
     readonly [Symbol.toStringTag]: string = "MegaMap"
     _refInstance: ShallowRef<MegaMap<K, V>>
     protected _triggerRef?: Function
-    private subLists: Record<string, V[]>
+    private readonly subLists: Record<string, V[]>
     private secondaryMaps: Array<MegaMap<string, V> | Ref<MegaMap<string, V>>> = []
     private readonly _filter?: (item: V) => boolean
     private readonly _sort?: (item1: V, item2: V) => number
@@ -39,7 +38,6 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
         this.subLists = reactive({})
         this.onUpdated = opts.onUpdated
 
-
         for (const filterKey in this._subListFilters) {
             this.subLists[filterKey] = ref([])
         }
@@ -47,12 +45,10 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
         this.getAll().then(() => {
             this.updateSubLists()
         })
+        this.notifyMapUpdated()
 
         if (this.onUpdated) {
-            setTimeout(() => {
-                this.notifyMapUpdated()
-                this.onUpdated()
-            }, 0)
+            this.onUpdated()
         }
     }
 
