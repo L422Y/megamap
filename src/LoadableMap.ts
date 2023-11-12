@@ -13,7 +13,7 @@ export class LoadableMap<K, V extends Record<string, any>> {
     readonly [Symbol.toStringTag]: string = "LoadableMap"
     keyProperty: string
     protected _map: Ref<Map<string, V>> = ref(new Map<string, V>())
-    computedValues = computed(() => this._map.values())
+    computedValues = computed(() => this._map.value.values())
     protected loading: Map<string, Promise<V | undefined>> = new Map<string, Promise<V | undefined>>()
     protected loadingAll: Promise<Map<string, V> | undefined> | undefined
     protected readonly loadOne: (key: string) => Promise<V | undefined>
@@ -89,7 +89,7 @@ export class LoadableMap<K, V extends Record<string, any>> {
 
    // return this._map.value as Map<string, V>
     mapRef(): Map<string, V> {
-        return this._map
+        return this._map.value
     }
 
 
@@ -114,6 +114,9 @@ export class LoadableMap<K, V extends Record<string, any>> {
     }
 
     delete(key: string): boolean {
+        if (!this._map.value.has(key)) {
+            return false
+        }
         return this._map.value.delete(key)
     }
 
