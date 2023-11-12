@@ -4,8 +4,7 @@
 [![wakatime](https://wakatime.com/badge/user/018b859f-13fa-41e2-9883-185549942dff/project/018bbdef-9ad5-44b2-a07f-56a02612b0e9.svg)](https://wakatime.com/badge/user/018b859f-13fa-41e2-9883-185549942dff/project/018bbdef-9ad5-44b2-a07f-56a02612b0e9)
 [![npm version](https://badge.fury.io/js/megamap.svg)](https://badge.fury.io/js/megamap)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-![Build Status](https://github.com/l422y/megamap/actions/workflows/build.yml/badge.svg)
-![Test Status](https://github.com/l422y/megamap/actions/workflows/test.yml/badge.svg)
+![Build Status](https://github.com/l422y/megamap/actions/workflows/main.yml/badge.svg)
 
 
 MegaMap is a TypeScript library designed for advanced key-value mapping. It extends the native JavaScript `Map` object and integrates additional features such as caching, loadability, and automatic expiry of entries. MegaMap is built upon two foundational classes, `LoadableMap` and `CachedLoadableMap`, each offering distinct capabilities. This library is ideal for sophisticated mapping solutions where enhanced control over data storage and retrieval is needed.
