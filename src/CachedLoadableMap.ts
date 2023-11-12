@@ -68,7 +68,13 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
     }
 
     delete(key: string): boolean {
-        this.expiryCache.delete(key)
+        if (!super.has(key)) {
+            return false
+        }
+
+        if (this.expiryCache.has(key)) {
+            this.expiryCache.delete(key)
+        }
         return super.delete(key)
     }
 
