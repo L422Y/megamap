@@ -1,31 +1,31 @@
 import { CachedLoadableMap } from "./CachedLoadableMap"
-import type { Ref } from "vue"
-import { isRef, reactive, unref } from "vue"
 import Fuse from "fuse.js"
 
-interface MegaMapOptions<K, V> {
+export interface MegaMapOptions<K, V> {
     loadOne: (key: string) => Promise<V | undefined>,
     loadAll?: () => Promise<Map<string, V> | V[]>,
     expiryInterval?: number,
     keyProperty?: string,
-    secondaryMaps?: Array<MegaMap<any, any> | Ref<MegaMap<any, any>>>,
+    secondaryMaps?: Array<MegaMap<any, any>>,
     filter?: (item: V) => boolean,
     sort?: (item1: V, item2: V) => number,
     searchableFields?: string[]
     subListFilters?: Record<string, (item: V) => boolean>;
     onUpdated?: () => void
+    reactive?: boolean
 }
 
 
 export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap<string, V> {
     readonly [Symbol.toStringTag]: string = "MegaMap"
+    public readonly version = 2
     protected _triggerRef?: Function
-    private readonly subLists: Record<string, V[]>
-    private secondaryMaps: Array<MegaMap<string, V> | Ref<MegaMap<string, V>>> = []
-    private readonly _filter?: (item: V) => boolean
-    private readonly _sort?: (item1: V, item2: V) => number
-    private readonly _searchableFields: string[]
-    private readonly _subListFilters: Record<string, (item: V) => boolean>
+    subLists: Record<string, V[]> = {}
+    private secondaryMaps: Array<MegaMap<string, V>> = []
+    private  _filter?: (item: V) => boolean
+    private  _sort?: (item1: V, item2: V) => number
+    private  _searchableFields: string[]
+     _subListFilters: Record<string, (item: V) => boolean>
 
     constructor(opts: MegaMapOptions<string, V>) {
         super(opts)
@@ -34,23 +34,10 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
         this._sort = opts.sort
         this._searchableFields = opts.searchableFields ?? []
         this._subListFilters = opts.subListFilters || {}
-        this.subLists = reactive({})
-        this.onUpdated = opts.onUpdated
 
-        for (const filterKey in this._subListFilters) {
-            this.subLists[filterKey] = []
-        }
-
-        this.getAll().then(() => {
-            this.updateSubLists()
+        this.init.bind(this)(opts).catch((err) => {
+            console.error(err)
         })
-
-        if (this.onUpdated) {
-            setTimeout(() => {
-                this.notifyMapUpdated()
-                this.onUpdated()
-            }, 0)
-        }
     }
 
     public async load(key: string): Promise<V | undefined> {
@@ -87,17 +74,17 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
             this.set(item[this.keyProperty], item)
         })
         this.secondaryMaps.forEach(map => {
-            if (isRef(map)) {
-                map.value.bulkAdd(items)
-            } else {
-                map.bulkAdd(items)
-            }
+            // if (isRef(map)) {
+            //     map.value.bulkAdd(items)
+            // } else {
+            map.bulkAdd(items)
+            // }
         })
     }
 
-    public async addSecondaryMap(map: MegaMap<string, V> | Ref<MegaMap<string, V>>) {
+    public async addSecondaryMap(map: MegaMap<string, V>) {
         this.secondaryMaps.push(map)
-        await unref(map).value.bulkAdd(Array.from(this._map.value.values()))
+        await map.bulkAdd(Array.from(this._map.value.values()))
     }
 
     public filterItems(criteria: (value: V) => boolean): V[] {
@@ -140,14 +127,13 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
         return results
     }
 
-
-    // SUB LISTS
-
     public set(key: string, value: V): this {
         super.set(key, value)
         this.notifyMapUpdated()
         return this
     }
+
+    // SUB LISTS
 
     public delete(key: string): boolean {
         const result = super.delete(key)
@@ -160,22 +146,68 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
         this.notifyMapUpdated()
     }
 
+    async init(opts: MegaMapOptions<string, V>) {
+        let reactiveWrapper: any = (input: any) => {
+            return input
+        }
+        if (opts.reactive) {
+            reactiveWrapper = await import("vue").then(({reactive}) => reactive)
+            console.log("reactive", reactiveWrapper)
+            this._map = reactiveWrapper(this._map)
+        }
+
+        this.subLists = new Proxy({}, {
+            get: (target, prop) => {
+                if (prop === Symbol.iterator) {
+                    return function* () {
+                        for (let [key, val] of Object.entries(target)) {
+                            yield [key, val]
+                        }
+                    }
+                }
+                return prop in target ? target[prop] : []
+            },
+            set: (target, prop, value) => {
+                target[prop] = value
+                return true
+            }
+        })
+
+
+        this.onUpdated = opts.onUpdated
+
+        for (const filterKey in this._subListFilters) {
+            this.subLists[filterKey] = []
+        }
+
+        this.getAll().then(() => {
+            this.updateSubLists()
+        })
+
+        if (this.onUpdated) {
+            setTimeout(() => {
+                this.notifyMapUpdated()
+                this.onUpdated()
+            }, 0)
+        }
+    }
+
     private updateSecondaryMaps(item: V) {
         this.secondaryMaps.forEach(map => {
-            unref(map).set(item[unref(map).keyProperty], item)
+            map.set(item[map.keyProperty], item)
         })
     }
 
-    private updateSubLists() {
+    updateSubLists() {
         for (const [filterKey, filter] of Object.entries(this._subListFilters)) {
             this.subLists[filterKey] = [...this.values()].filter(filter)
         }
     }
 
-    private notifyMapUpdated() {
+    notifyMapUpdated() {
         this.updateSubLists()
         this.secondaryMaps.forEach(map => {
-            if (isRef(map)) {
+            if (map) {
                 map.value.notifyMapUpdated()
             } else if (map instanceof MegaMap) {
                 map.notifyMapUpdated()
