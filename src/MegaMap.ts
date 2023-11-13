@@ -1,7 +1,8 @@
-import { CachedLoadableMap } from "./CachedLoadableMap"
+import { CachedLoadableMap, CachedLoadableMapOptions } from "./CachedLoadableMap"
+
 import Fuse from "fuse.js"
 
-export interface MegaMapOptions<K, V> {
+export type MegaMapOptions<K, V> = {
     loadOne: (key: string) => Promise<V | undefined>,
     loadAll?: () => Promise<Map<string, V> | V[]>,
     expiryInterval?: number,
@@ -13,10 +14,10 @@ export interface MegaMapOptions<K, V> {
     subListFilters?: Record<string, (item: V) => boolean>;
     onUpdated?: () => void
     reactive?: boolean
-}
+} & CachedLoadableMapOptions<K, V>
 
 export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap<string, V> {
-    readonly [Symbol.toStringTag]: string = "MegaMap"
+    [Symbol.toStringTag]: string = "MegaMap"
     public readonly version = 2
     subLists: Record<string, V[]> = {}
     _subListFilters: Record<string, (item: V) => boolean>
@@ -38,15 +39,6 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
         })
     }
 
-    public async load(key: string): Promise<V | undefined> {
-        return await super.load(key).then((result: V | undefined) => {
-            if (result) {
-                this.updateSecondaryMaps(result)
-                this.updateSubLists()
-            }
-            return result
-        })
-    }
 
     public async get(key: string): Promise<V | undefined> {
         return await super.get(key).then((result: V | undefined) => {
@@ -208,3 +200,4 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
         })
     }
 }
+
