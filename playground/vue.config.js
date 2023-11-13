@@ -1,21 +1,24 @@
-const { defineConfig } = require('@vue/cli-service')
+const {defineConfig} = require("@vue/cli-service")
+const mockApi = require("./src/mock-api")
 module.exports = defineConfig({
-  transpileDependencies: true,
-  // hot reload
+
+    transpileDependencies: true,
     devServer: {
-        // Fixing issue with WDS disconnected and sockjs network error
-        host: '0.0.0.0',
-        // public: '0.0.0.0:8080',
-        // disableHostCheck: true,
-        // End of fix
+        host: "0.0.0.0",
+        onBeforeSetupMiddleware(devServer) {
+            if (!devServer) {
+                throw new Error("webpack-dev-server is not defined")
+            }
+            console.log("onBeforeSetupMiddleware")
+            devServer.app.use(mockApi)
+        }
     },
     chainWebpack: config => {
         config.module
-        .rule('vue')
-        .use('vue-loader')
-        .tap(options => {
-            // modify the options...
-            return options
-        })
+            .rule("vue")
+            .use("vue-loader")
+            .tap(options => {
+                return options
+            })
     },
 })
