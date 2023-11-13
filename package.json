@@ -19,10 +19,25 @@
     "cache",
     "loadable",
     "expirable",
-    "javascript"
+    "javascript",
+    "typescript",
+    "vue",
+    "vue3",
+    "reactive",
+    "reactivity",
+    "database",
+    "hashmap"
   ],
   "files": [
     "dist"
+  ],
+  "contributors": [
+    {
+      "name": "Larry Williamson",
+      "email": "l422y@l422y.com",
+      "url": "https://l422y.com",
+      "username": "l422y"
+    }
   ],
   "author": "Larry Williamson <l422y@l422y.com>",
   "license": "MIT",
@@ -38,7 +53,9 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
-    "fuse.js": "^7.0.0",
-    "vue": "^3.3.8"
+    "fuse.js": "^7.0.0"
+  },
+  "optionalDependencies": {
+    "vue": "^3.0.0"
   }
 }
