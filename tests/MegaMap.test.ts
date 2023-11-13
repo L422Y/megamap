@@ -34,8 +34,8 @@ describe("MegaMap", () => {
 
         const item1 = await megaMap.load("key1")
         expect(item1).toEqual({_id: "key1", data: "Data for key1"})
-        expect(secondaryMegaMap["_map"].value.has("key1")).toBeTruthy()
-        expect(secondaryMegaMap["_map"].value.get("key1")).toEqual(item1)
+        expect(secondaryMegaMap["_map"].has("key1")).toBeTruthy()
+        expect(secondaryMegaMap["_map"].get("key1")).toEqual(item1)
     })
 
     // test('should throw error when getAll returns no items', async () => {
