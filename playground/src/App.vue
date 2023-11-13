@@ -30,10 +30,6 @@
     </fieldset>
 
   </template>
-  <template v-else>
-    ...
-    {{ [megaMap.subLists] }}
-  </template>
 </template>
 
 <script setup>
