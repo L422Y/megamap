@@ -10,6 +10,7 @@
   "dependencies": {
     "@vitejs/plugin-vue": "^4.4.1",
     "core-js": "^3.8.3",
+    "express": "^4.18.2",
     "megamap": "file:..",
     "vite": "^4.5.0",
     "vue": "^3.2.13"
@@ -20,6 +21,7 @@
     "@vue/cli-plugin-babel": "~5.0.0",
     "@vue/cli-plugin-eslint": "~5.0.0",
     "@vue/cli-service": "~5.0.0",
+    "@vueuse/head": "^2.0.0",
     "eslint": "^7.32.0",
     "eslint-plugin-vue": "^8.0.3"
   },
