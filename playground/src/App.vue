@@ -1,23 +1,46 @@
 <template>
-  <div>
-    <h1>MegaMap Vue Component</h1>
-    <fieldset v-for="(list,key) of megaMap.subLists" :key="key">
-      <legend>{{ key.toLocaleUpperCase() }}</legend>
+  <template v-if="megaMap.subLists">
+    <h1>MegaMap</h1>
+
+    <fieldset>
+      <legend>ACTIVE</legend>
       <div>
-        <div v-for="item in list" :key="item._id">
+        <div v-for="item in megaMap.subLists.active" :key="item._id">
           {{ item.data }}
         </div>
       </div>
     </fieldset>
 
-  </div>
+    <fieldset>
+      <legend>DRAFT</legend>
+      <div>
+        <div v-for="item in megaMap.subLists.draft" :key="item._id">
+          {{ item.data }}
+        </div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>INACTIVE</legend>
+      <div>
+        <div v-for="item in megaMap.subLists.inactive" :key="item._id">
+          {{ item.data }}
+        </div>
+      </div>
+    </fieldset>
+
+  </template>
+  <template v-else>
+    ...
+    {{ [megaMap.subLists] }}
+  </template>
 </template>
 
 <script setup>
 
-import {MegaMap} from "megamap"
+import {ReactiveMegaMap} from "megamap"
 
-const megaMap = new MegaMap({
+const megaMap = new ReactiveMegaMap({
   loadOne: key => Promise.resolve({
     _id: key,
     data: `data: ${key}`,
