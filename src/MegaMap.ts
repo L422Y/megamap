@@ -15,17 +15,15 @@ export interface MegaMapOptions<K, V> {
     reactive?: boolean
 }
 
-
 export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap<string, V> {
     readonly [Symbol.toStringTag]: string = "MegaMap"
     public readonly version = 2
-    protected _triggerRef?: Function
     subLists: Record<string, V[]> = {}
+    _subListFilters: Record<string, (item: V) => boolean>
     private secondaryMaps: Array<MegaMap<string, V>> = []
-    private  _filter?: (item: V) => boolean
-    private  _sort?: (item1: V, item2: V) => number
-    private  _searchableFields: string[]
-     _subListFilters: Record<string, (item: V) => boolean>
+    private _filter?: (item: V) => boolean
+    private _sort?: (item1: V, item2: V) => number
+    private readonly _searchableFields: string[]
 
     constructor(opts: MegaMapOptions<string, V>) {
         super(opts)
@@ -84,7 +82,7 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
 
     public async addSecondaryMap(map: MegaMap<string, V>) {
         this.secondaryMaps.push(map)
-        await map.bulkAdd(Array.from(this._map.value.values()))
+        await map.bulkAdd(Array.from(this._map.values()))
     }
 
     public filterItems(criteria: (value: V) => boolean): V[] {
@@ -147,15 +145,6 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
     }
 
     async init(opts: MegaMapOptions<string, V>) {
-        let reactiveWrapper: any = (input: any) => {
-            return input
-        }
-        if (opts.reactive) {
-            reactiveWrapper = await import("vue").then(({reactive}) => reactive)
-            console.log("reactive", reactiveWrapper)
-            this._map = reactiveWrapper(this._map)
-        }
-
         this.subLists = new Proxy({}, {
             get: (target, prop) => {
                 if (prop === Symbol.iterator) {
@@ -192,12 +181,6 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
         }
     }
 
-    private updateSecondaryMaps(item: V) {
-        this.secondaryMaps.forEach(map => {
-            map.set(item[map.keyProperty], item)
-        })
-    }
-
     updateSubLists() {
         for (const [filterKey, filter] of Object.entries(this._subListFilters)) {
             this.subLists[filterKey] = [...this.values()].filter(filter)
@@ -217,5 +200,11 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
             super.onUpdated && super.onUpdated()
             this.onUpdated()
         }
+    }
+
+    private updateSecondaryMaps(item: V) {
+        this.secondaryMaps.forEach(map => {
+            map.set(item[map.keyProperty], item)
+        })
     }
 }
