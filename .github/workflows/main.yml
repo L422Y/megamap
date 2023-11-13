@@ -59,6 +59,6 @@ jobs:
       - run: npm run build
 
       # Automated version check and publish
-      - uses: JS-DevTools/npm-publish@v1
+      - uses: JS-DevTools/npm-publish@v3
         with:
           token: ${{ secrets.NPM_TOKEN }}
