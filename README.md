@@ -73,6 +73,24 @@ const fakeMultipleRecordLoad = async () => () => Promise.resolve<TFakePost[]>([
 
 ```
 
+### Named Queries
+
+We'll also set up some named queries, these are basically stored functions that can be called on the MegaMap instance,
+allowing you to easily retrieve data from the map without having to write the same code over and over again.
+
+The format is meant to be clean and simple, so that you can easily read and understand what the query is doing.
+
+```typescript
+ const namedQueries = {
+    byAuthor: async (authorId) => {
+        return fetch(`/api/posts/by-author/${authorId}`).then(res => res.json())
+    },
+    byTag: async (tag) => {
+        return fetch(`/api/posts/by-tag/${tag}`).then(res => res.json())
+    },
+}
+```
+
 ### Sub-lists / Filters
 
 ...and some filters that will be used in the `subListFilters` option to populate the `subLists` property of our MegaMap:
@@ -102,6 +120,7 @@ const allPosts = new MegaMap({
     loadOne: fakeRecordLoad, // see above
     loadAll: fakeMultipleRecordLoad, // see above,
     subListFilters, // see above
+    namedQueries, // see above
 })
 
 // another MegaMap that will be populated with user's "posts"
@@ -110,6 +129,7 @@ const myPosts = MegaMap({
     loadAll: fakeMultipleRecordLoad, // see above,
     subListFilters, // see above
     secondaryMaps: [allPosts] // see below
+   
 })
 
 // simulate a record load every second
@@ -127,31 +147,35 @@ This way, when a new item is loaded into `myPosts`, it will also be added to `al
 and for `ReactiveMegaMap` in Vue:
 
 ```vue
-
 <template>
-  <fieldset>
-    <legend>ACTIVE</legend>
-    <div>
-      <div v-for="item in megaMap.subLists.active" :key="item._id">
-        {{ item.data }}
+   <fieldset>
+      <legend>ACTIVE</legend>
+      <div>
+         <div v-for="item in megaMap.subLists.active" :key="item._id">
+            {{ item.data }}
+         </div>
       </div>
-    </div>
-  </fieldset>
+   </fieldset>
 </template>
 <script setup>
 
-  import {ReactiveMegaMap} from "megamap"
+   import {ReactiveMegaMap} from "megamap"
 
-  const megaMap = new ReactiveMegaMap({
-    loadOne: fakeRecordLoad, // see above
-    loadAll: fakeMultipleRecordLoad, // see above,
-    subListFilters // see above
-  })
+   const megaMap = new ReactiveMegaMap({
+      loadOne: fakeRecordLoad, // see above
+      loadAll: fakeMultipleRecordLoad, // see above,
+      subListFilters, // see above
+      namedQueries, // see above
+   })
 
-  // simulate a record load every second
-  setInterval(async () => {
-    await megaMap.get(`key${Math.floor(Math.random() * 1008) + 1}`)
-  }, 1000)
+   // using the predefined named queries
+   const authorPosts = ref(await megaMap.query.byAuthor("00001"))
+   const taggedPosts = ref(await megaMap.query.byTag("fake"))
+
+   // simulate a record load every second
+   setInterval(async () => {
+      await megaMap.get(`key${Math.floor(Math.random() * 1008) + 1}`)
+   }, 1000)
 
 </script>
 ```
