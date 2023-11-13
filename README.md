@@ -10,6 +10,9 @@ and integrates additional features such as caching, loadability, and automatic e
 two foundational classes, `LoadableMap` and `CachedLoadableMap`, each offering distinct capabilities. This library is
 ideal for sophisticated mapping solutions where enhanced control over data storage and retrieval is needed.
 
+Ideally, this library is meant to be used in conjunction with a data store (e.g. a database, API, etc.),
+and/or state management solution, such as [pinia](https://github.com/vuejs/pinia). 
+
 ## Features
 
 MegaMap provides a suite of TypeScript classes for advanced key-value mapping, each offering unique capabilities:
@@ -41,6 +44,9 @@ npm install megamap
 ```
 
 ## Usage
+
+In the examples below we are implementing things outside of state management, and in
+a vue template directly. This is not recommended for production use, but is done here for the sake of simplicity.
 
 For these examples, we will set up some fake data loader functions:
 
