@@ -13,3 +13,4 @@ type FilterableMapOptions<K, V> = {
 export * from "./CachedLoadableMap"
 export * from "./LoadableMap"
 export * from "./MegaMap"
+export * from "./ReactiveMegaMap"
