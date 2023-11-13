@@ -1,18 +1,18 @@
-import { LoadableMap } from "./LoadableMap"
+import { LoadableMap, LoadableMapOptions } from "./LoadableMap"
 
 type CacheExpiry = {
     expiry: number;
 };
 
-type CachedLoadableMapOptions<K, V> = {
+export type CachedLoadableMapOptions<K, V> = {
     loadOne: (key: string) => Promise<V | undefined>;
     loadAll?: () => Promise<V[] | Map<string, V>>;
     expiryInterval?: number;
     keyProperty?: string;
-};
+} & LoadableMapOptions<K, V>
 
 export class CachedLoadableMap<K, V extends Record<string, any>> extends LoadableMap<string, V> {
-    readonly [Symbol.toStringTag]: string = "CachedLoadableMap"
+    [Symbol.toStringTag]: string = "CachedLoadableMap"
     private expiryCache: Map<string, CacheExpiry> = new Map<string, CacheExpiry>()
     private readonly expiryInterval?: number
 
