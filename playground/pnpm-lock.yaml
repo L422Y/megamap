@@ -12,7 +12,7 @@ dependencies:
     specifier: ^3.8.3
     version: registry.npmjs.org/core-js@3.33.2
   megamap:
-    specifier: file:../
+    specifier: file:..
     version: file:..
   vite:
     specifier: ^4.5.0
