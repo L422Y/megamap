@@ -1,4 +1,4 @@
-import { MegaMapOptions, MegaMap } from "./MegaMap"
+import { MegaMap, MegaMapOptions } from "./MegaMap"
 
 import { reactive } from "vue"
 
