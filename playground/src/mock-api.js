@@ -1,8 +1,17 @@
 const express = require("express")
 const router = express.Router()
-let posts = []
+let posts = [
+    {_id: "key1", data: "value1", status: "active"},
+    {_id: "key2", data: "value2", status: "inactive"},
+    {_id: "key3", data: "value3", status: "inactive"},
+    {_id: "key4", data: "value4", status: "draft"},
+    {_id: "key5", data: "value5", status: "draft"},
+    {_id: "key6", data: "value6", status: "draft"},
+    {_id: "key7", data: "value7", status: "draft"},
+    {_id: "key8", data: "value8", status: "draft"},
+]
 const fakePost = (id) => {
-    const _id = id || Math.floor(Math.random() * 1000000)
+    const _id = id || Math.floor(Math.random() * 1000000) + 10
     const post = {
         _id,
         title: "Fake Post",
@@ -16,6 +25,7 @@ const fakePost = (id) => {
 }
 
 for (let i = 0; i < 3; i++) {
+
     posts.push(fakePost())
 }
 
@@ -37,7 +47,7 @@ router.get("/api/posts/by-slug/:slug", (req, res) => {
     }
 })
 router.get("/api/posts/by-tag/:tag", (req, res) => {
-    const results = posts.filter((post) => post.tags.includes(req.params.tag))
+    const results = posts.filter((post) => post.tags?.includes(req.params.tag))
     if (results) {
         res.json(results)
     } else {
