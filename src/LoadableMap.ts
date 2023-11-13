@@ -12,8 +12,8 @@ export type WithKeyProperty<K extends string | number | symbol, V> = V & Record<
 export class LoadableMap<K, V extends Record<string, any>> {
     readonly [Symbol.toStringTag]: string = "LoadableMap"
     keyProperty: string
-    protected _map: Ref<Map<string, V>> = ref(new Map<string, V>())
-    computedValues = computed(() => this._map.value.values())
+    protected _map: Map<string, V> = new Map<string, V>()
+    computedValues = computed(() => this._map.values())
     protected loading: Map<string, Promise<V | undefined>> = new Map<string, Promise<V | undefined>>()
     protected loadingAll: Promise<Map<string, V> | undefined> | undefined
     protected readonly loadOne: (key: string) => Promise<V | undefined>
@@ -27,7 +27,7 @@ export class LoadableMap<K, V extends Record<string, any>> {
     }
 
     get size(): number {
-        return this._map.value.size
+        return this._map.size
     }
 
     get value() {
@@ -53,8 +53,8 @@ export class LoadableMap<K, V extends Record<string, any>> {
             return this.loading.get(key)
         }
 
-        if (this._map.value.has(key)) {
-            return this._map.value.get(key)
+        if (this._map.has(key)) {
+            return this._map.get(key)
         }
 
         const result = await this.load(key)
@@ -66,7 +66,7 @@ export class LoadableMap<K, V extends Record<string, any>> {
     }
 
     set(key: string, value: V) {
-        this._map.value.set(key, value)
+        this._map.set(key, value)
         if (this.onUpdated) {
             this.onUpdated()
         }
@@ -91,56 +91,55 @@ export class LoadableMap<K, V extends Record<string, any>> {
     }
 
     values(): IterableIterator<V> {
-        return this._map.value.values()
+        return this._map.values()
     }
 
-    // return this._map.value as Map<string, V>
     mapRef(): Map<string, V> {
-        return this._map.value
+        return this._map
     }
 
 
     keys(): IterableIterator<string> {
-        return this._map.value.keys()
+        return this._map.keys()
     }
 
     entries(): IterableIterator<[string, V]> {
-        return this._map.value.entries()
+        return this._map.entries()
     }
 
     [Symbol.iterator](): IterableIterator<[string, V]> {
-        return this._map.value.entries()
+        return this._map.entries()
     }
 
     forEach(callbackfn: (value: V, key: string, map: Map<string, V>) => void, thisArg?: any): void {
-        return this._map.value.forEach(callbackfn, thisArg)
+        return this._map.forEach(callbackfn, thisArg)
     }
 
     clear(): void {
-        return this._map.value.clear()
+        return this._map.clear()
     }
 
     delete(key: string): boolean {
-        if (!this._map.value.has(key)) {
+        if (!this._map.has(key)) {
             return false
         }
-        return this._map.value.delete(key)
+        return this._map.delete(key)
     }
 
     deleteBy(propName: string, value: any): boolean {
-        const item = [...this._map.value.values()].find((item) => item[propName] === value)
+        const item = [...this._map.values()].find((item) => item[propName] === value)
         if (item) {
-            return this._map.value.delete(item[this.keyProperty])
+            return this._map.delete(item[this.keyProperty])
         }
         return false
     }
 
     has(key: string): boolean {
-        return this._map.value.has(key)
+        return this._map.has(key)
     }
 
     async getBy(propName: string, value: any): Promise<V | undefined> {
-        const result = [...this._map.value.values()].find((item) => item[propName] === value)
+        const result = [...this._map.values()].find((item) => item[propName] === value)
         if (!result) {
             await this.get(value).then((item) => {
                 if (item) {
@@ -154,16 +153,16 @@ export class LoadableMap<K, V extends Record<string, any>> {
     private processLoadResult(result: V[] | Map<string, V>): Map<string, V> {
         if (result instanceof Map) {
             result.forEach((value, key) => {
-                this._map.value.set(this.keyProperty, value)
+                this._map.set(this.keyProperty, value)
             })
         } else {
             result.forEach((item: V) => {
-                this._map.value.set(item[this.keyProperty], item)
+                this._map.set(item[this.keyProperty], item)
             })
         }
         if (this.onUpdated) {
             this.onUpdated()
         }
-        return this._map.value
+        return this._map
     }
 }
