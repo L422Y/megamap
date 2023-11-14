@@ -24,7 +24,11 @@ describe("LoadableMap", () => {
     test("should call loadOne and add item to map if not present", async () => {
         const item = await loadableMap.get("key1")
         expect(mockLoadOneFunction).toHaveBeenCalledWith("key1")
-        expect(item).toEqual({_id: "key1", data: "Data for key1"})
+
+        expect(item._id).toBe("key1")
+        expect(item.data).toBe("Data for key1")
+        expect(item).toHaveProperty("refreshed_at")
+
         expect(loadableMap["_map"].has("key1")).toBeTruthy()
     })
 
@@ -42,7 +46,17 @@ describe("LoadableMap", () => {
         const allItems = await loadableMap.getAll()
         expect(mockLoadAllFunction).toHaveBeenCalled()
         expect(allItems?.size).toBe(2)
-        expect(allItems?.get("key1")).toEqual({_id: "key1", data: "value1"})
-        expect(allItems?.get("key2")).toEqual({_id: "key2", data: "value2"})
+
+        const item1 = allItems?.get("key1")
+        const item2 = allItems?.get("key2")
+
+        expect(item1?._id).toBe("key1")
+        expect(item1?.data).toBe("value1")
+        expect(item1).toHaveProperty("refreshed_at")
+
+        expect(item2?._id).toBe("key2")
+        expect(item2?.data).toBe("value2")
+        expect(item2).toHaveProperty("refreshed_at")
+
     })
 })
