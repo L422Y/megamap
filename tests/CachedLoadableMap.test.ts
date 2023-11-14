@@ -26,7 +26,10 @@ describe("CachedLoadableMap", () => {
     test("should retrieve item and set expiry", async () => {
         const item = await cachedLoadableMap.get("key1")
         expect(mockLoadOneFunction).toHaveBeenCalledWith("key1")
-        expect(item).toEqual({_id: "key1", data: "Data for key1"})
+        expect(item._id).toBe("key1")
+        expect(item.data).toBe("Data for key1")
+        expect(item).toHaveProperty("refreshed_at")
+
         expect(cachedLoadableMap["expiryCache"].has("key1")).toBeTruthy()
         expect(cachedLoadableMap["expiryCache"].get("key1")?.expiry).toBeGreaterThan(Date.now())
     })
