@@ -30,25 +30,28 @@ describe("MegaMap", () => {
 
     test("should retrieve item and update secondary maps", async () => {
         const item = await megaMap.get("key1")
-        expect(item).toEqual({_id: "key1", data: "value1"})
+        expect(item._id).toBe("key1")
+        expect(item.data).toBe("value1")
+        expect(item).toHaveProperty("refreshed_at")
 
-        const item2 = await megaMap.load("key3")
-        console.log(item2)
-        expect(item2).toEqual({_id: "key3", data: "Data for key3"})
+        const item3 = await megaMap.load("key3")
+        expect(item3._id).toBe("key3")
+        expect(item3.data).toBe("Data for key3")
+        expect(item3).toHaveProperty("refreshed_at")
+
         expect(secondaryMegaMap["_map"].has("key3")).toBeTruthy()
-        expect(secondaryMegaMap["_map"].get("key3")).toEqual(item2)
+        expect(secondaryMegaMap["_map"].get("key3")).toEqual(item3)
     })
-
-    // test('should throw error when getAll returns no items', async () => {
-    //     mockLoadAllFunction.mockResolvedValueOnce(new Map());
-    //     await expect(megaMap.getAll()).rejects.toThrow("No items found");
-    // });
 
     test("should load all items with getAll", async () => {
         const items = await megaMap.getAll()
         expect(mockLoadAllFunction).toHaveBeenCalled()
         expect(items?.size).toBe(2)
-        expect(items?.get("key1")).toEqual({_id: "key1", data: "value1"})
+        let item = items?.get("key1")
+        expect(item._id).toBe("key1")
+        expect(item.data).toBe("value1")
+        expect(item).toHaveProperty("refreshed_at")
+
     })
 
     // Additional tests can be added as needed
