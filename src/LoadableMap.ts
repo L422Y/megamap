@@ -122,7 +122,10 @@ export class LoadableMap<K, V extends RefreshableRecord> {
                     this.loading.delete(key)
                     this.emit("updated")
                     return result
-                })
+                }).catch((err) => {
+                console.error(err)
+                resolve(undefined)
+            })
         })
 
         this.loading.set(key, result)
@@ -344,8 +347,10 @@ export class LoadableMap<K, V extends RefreshableRecord> {
             })
         } else {
             result.forEach((item: any) => {
-                item.refreshed_at = new Date()
-                this._map.set(item[this.keyProperty], item as V)
+                if(!!item) {
+                    item.refreshed_at = new Date()
+                    this._map.set(item[this.keyProperty], item as V)
+                }
             })
         }
         this.loadingAll = undefined
