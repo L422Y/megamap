@@ -2,7 +2,7 @@ import { MegaMap, MegaMapOptions } from "./MegaMap"
 
 import { MaybeRef, reactive } from "vue"
 
-export class ReactiveMegaMap<K, V extends Record<string, any>> extends MegaMap<string, V> {
+export class ReactiveMegaMap<K, V extends Record<string, any>> extends MegaMap<K, V> {
     readonly [Symbol.toStringTag]: string = "ReactiveMegaMap"
     _subLists: MaybeRef<Record<string, V[]>> = reactive({})
 
@@ -31,12 +31,6 @@ export class ReactiveMegaMap<K, V extends Record<string, any>> extends MegaMap<s
         for (const [filterKey, filter] of Object.entries(this._subListFilters)) {
             this._subLists[filterKey] = [...this.values()].filter(filter)
         }
-    }
-
-    private _updateLoadingStatus() {
-        this.isLoading.all = !!this.loadingAll
-        this.isLoading.loadingBy = this.loadingBy.size > 0
-        this.isLoading.loadingQuery = this.loadingQuery.size > 0
     }
 
     public readonly isLoading = reactive({
