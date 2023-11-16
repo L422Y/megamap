@@ -33,4 +33,17 @@ export class ReactiveMegaMap<K, V extends Record<string, any>> extends MegaMap<s
         }
     }
 
+    private _updateLoadingStatus() {
+        this.isLoading.all = !!this.loadingAll
+        this.isLoading.loadingBy = this.loadingBy.size > 0
+        this.isLoading.loadingQuery = this.loadingQuery.size > 0
+        console.log("updateLoadingStatus", this.isLoading)
+    }
+
+    public readonly isLoading = reactive({
+        all: false,
+        loadingBy: false,
+        loadingQuery: false
+    })
+
 }
