@@ -63,9 +63,18 @@ export class LoadableMap<K, V extends RefreshableRecord> {
         this.isLoading.all = this.loadingAll !== undefined
         this.isLoading.loadingBy = this.loadingBy.size > 0
         this.isLoading.loadingQuery = this.loadingQuery.size > 0
+        this.hasLoadedOnce.all ||= this.loadingAll !== undefined
+        this.hasLoadedOnce.loadingBy ||= this.loadingBy.size > 0
+        this.hasLoadedOnce.loadingQuery ||= this.loadingQuery.size > 0
     }
 
     public readonly isLoading = {
+        all: false,
+        loadingBy: false,
+        loadingQuery: false
+    }
+
+    public readonly hasLoadedOnce = {
         all: false,
         loadingBy: false,
         loadingQuery: false
@@ -347,7 +356,7 @@ export class LoadableMap<K, V extends RefreshableRecord> {
             })
         } else {
             result.forEach((item: any) => {
-                if(!!item) {
+                if (!!item) {
                     item.refreshed_at = new Date()
                     this._map.set(item[this.keyProperty], item as V)
                 }

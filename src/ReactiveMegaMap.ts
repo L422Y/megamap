@@ -39,4 +39,10 @@ export class ReactiveMegaMap<K, V extends Record<string, any>> extends MegaMap<K
         loadingQuery: false
     })
 
+
+    public readonly hasLoadedOnce = reactive({
+        all: false,
+        loadingBy: false,
+        loadingQuery: false
+    })
 }
