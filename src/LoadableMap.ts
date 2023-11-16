@@ -1,4 +1,4 @@
-import { computed } from "vue"
+// import { computed, reactive, ref } from "vue"
 
 export interface LoadableMapOptions<K, V> {
     loadOne: (key: string) => Promise<V | undefined>,
@@ -17,13 +17,12 @@ export class LoadableMap<K, V extends RefreshableRecord> {
     readonly [Symbol.toStringTag]: string = "LoadableMap"
     keyProperty: string
     protected _map: Map<string, V> = new Map<string, V>()
-    computedValues = computed(() => this._map.values())
     protected loading: Map<string, Promise<V | undefined>> = new Map<string, Promise<V | undefined>>()
-    protected loadingQuery: Map<string, Promise<V | V[] | undefined>> = new Map<string, Promise< V | V[] | undefined>>()
+    protected loadingQuery: Map<string, Promise<V | V[] | undefined>> = new Map<string, Promise<V | V[] | undefined>>()
     protected loadingAll: Promise<Map<string, any> | undefined> | undefined
     protected loadingBy: Map<string, Promise<V | undefined>> = new Map<string, Promise<V | undefined>>()
     protected readonly loadOne: (key: string) => Promise<V | undefined>
-    private readonly loadAll?: () => Promise<V[] | Map<string, V>>
+    private readonly loadAll?: () => Promise<V[] | Map<string, RefreshableRecord>>
     protected readonly _namedQueries?: Record<string, (...args: any[]) => Promise<V | V[] | undefined>>
     private readonly _namedQueryData: Record<any, V | V[]> = {}
     protected readonly _queryExecutors: Record<string, (...args: any[]) => Promise<V | V[] | undefined>> = {}
@@ -47,14 +46,29 @@ export class LoadableMap<K, V extends RefreshableRecord> {
 
         if (opts.onUpdated) {
             this.on("updated", opts.onUpdated)
-        }
 
+        }
+        this.on("updated", () => {
+            this._updateLoadingStatus()
+        })
         if (opts.refreshInterval) {
             this._refreshInterval = opts.refreshInterval
             this._refreshIntervalId = setInterval(async function () {
                 await this.getAll(true)
             }.bind(this), this._refreshInterval)
         }
+    }
+
+    private _updateLoadingStatus() {
+        this.isLoading.all = this.loadingAll !== undefined
+        this.isLoading.loadingBy = this.loadingBy.size > 0
+        this.isLoading.loadingQuery = this.loadingQuery.size > 0
+    }
+
+    public readonly isLoading = {
+        all: false,
+        loadingBy: false,
+        loadingQuery: false
     }
 
     /**
@@ -70,16 +84,6 @@ export class LoadableMap<K, V extends RefreshableRecord> {
     get value() {
         return this._map
     }
-
-
-    // namedQueries() {
-    //
-    //     if (!this._namedQueries) {
-    //         throw new Error("Named queries are not defined")
-    //     }
-    //     const key = this._namedQueryKey(name, ...args)
-    //     return this._namedQueryData[key]
-    // }
 
     /**
      * Returns a reference to the query executor functions
@@ -108,13 +112,24 @@ export class LoadableMap<K, V extends RefreshableRecord> {
             return this._map.get(key)
         }
 
-        const result = await this.loadOne(key)
+        const result = new Promise<V | undefined>((resolve) => {
+            this.loadOne(key)
+                .then((result: V | undefined) => {
+                    this.set(key, result)
+                    this.processLoadResult([result]).then(() => {
+                        resolve(result)
+                    })
+                    this.loading.delete(key)
+                    this.emit("updated")
+                    return result
+                })
+        })
+
+        this.loading.set(key, result)
+
         if (result) {
-            this.set(key, result)
-            return this.processLoadResult([result]).get(key)
-        }
-        if (result) {
-            return result
+            this.emit("updated")
+            return await result
         }
 
         return undefined
@@ -177,15 +192,19 @@ export class LoadableMap<K, V extends RefreshableRecord> {
             return this._map
         }
 
-        this.loadingAll = this.loadAll()
-            .then((result: any[] | Map<string, any>) => {
-                this.loadingAll = undefined
-                return this.processLoadResult(result)
+        this.loadingAll = new Promise<any>(async (resolve) => {
+            return this.loadAll().then((result: any[] | Map<string, any>) => {
+                this.processLoadResult(result).then((result) => {
+                    resolve(result)
+                })
             }).catch((err) => {
+                console.error(err)
+                resolve(undefined)
+            }).finally(() => {
                 this.loadingAll = undefined
-                throw err
             })
-
+        })
+        this.emit("updated")
 
         return this.loadingAll
     }
@@ -317,7 +336,7 @@ export class LoadableMap<K, V extends RefreshableRecord> {
      * @param result
      * @private
      */
-    private processLoadResult(result: any[] | Map<string, any>): Map<string, any> {
+    private async processLoadResult(result: any[] | Map<string, any>): Promise<Map<string, V>> {
         if (result instanceof Map) {
             result.forEach((value, key) => {
                 value.refreshed_at = new Date()
@@ -329,6 +348,9 @@ export class LoadableMap<K, V extends RefreshableRecord> {
                 this._map.set(item[this.keyProperty], item as V)
             })
         }
+        this.loadingAll = undefined
+
+        console.timeEnd("loadAll")
 
         this.emit("updated")
 
