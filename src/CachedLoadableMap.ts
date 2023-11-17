@@ -16,7 +16,6 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
     private expiryCache: Map<string, CacheExpiry> = new Map<string, CacheExpiry>()
     private readonly expiryInterval?: number
     private _cachedQueryExecutors: Record<string, (...args: any[]) => Promise<V | V[]>> = {}
-
     private _cachedQueryData: Map<string, V | V[]> = new Map<string, V | V[]>()
 
     constructor(opts: CachedLoadableMapOptions<string, V>) {
