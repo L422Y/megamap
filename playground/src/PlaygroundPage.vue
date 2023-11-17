@@ -77,7 +77,7 @@ const taggedPosts = ref(await megaMap.query.byTag(selectedTag.value))
 watch(selectedTag, async (newValue) => taggedPosts.value = await megaMap.query.byTag(newValue))
 
 const getRandomArticle = async () => {
-  await megaMap.get(`key${Math.floor(Math.random() * 1008) + 1}`)
+  await megaMap.get(`key${Math.floor(Math.random() * 1000) + 1}`)
 }
 
 </script>
