@@ -363,11 +363,7 @@ export class LoadableMap<K, V extends RefreshableRecord> {
             })
         }
         this.loadingAll = undefined
-
-        console.timeEnd("loadAll")
-
         this.emit("updated")
-
         return this._map
     }
 
