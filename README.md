@@ -140,7 +140,7 @@ const myPosts = MegaMap({
 
 // simulate a record load every second
 setInterval(async () => {
-    await megaMap.get(`key${Math.floor(Math.random() * 1008) + 1}`)
+    await megaMap.get(`key${Math.floor(Math.random() * 1000) + 1}`)
 }, 1000)
 
 ```
