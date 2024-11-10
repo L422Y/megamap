@@ -18,7 +18,7 @@ const fakePost = (id) => {
         status: Math.random() > 0.5 ? "published" : "draft",
         slug: `fake-post-${_id}`,
         author: `0000${Math.floor(Math.random() * 3) + 1}`,
-        content: "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nulla facilisi. Nulla facilisi. Donec euismod, velit eget tincidunt ultricies, libero enim luctus nisl, in tincidunt sapien lorem eget dui. Donec auctor, massa at aliquam aliquam, augue eros tincidunt sem, a suscipit est augue id nisl. Nulla facilisi. Sed euismod, mauris sed ultricies ultricies, urna nisl ultrices lorem, ac tincidunt nisl eros sed nunc. Sed id tortor eget nisl euismod aliquet. Nulla facilisi. Sed euismod, mauris sed ultricies ultricies, urna nisl ultrices lorem, ac tincidunt nisl eros sed nunc. Sed id tortor eget nisl euismod aliquet. Nulla facilisi. Sed euismod, mauris sed ultricies ultricies, urna nisl ultrices lorem, ac tincidunt nisl eros sed nunc. Sed id tortor eget nisl euismod aliquet. Nulla facilisi.",
+        content: `Content for fake-post${_id}`
     }
     post.tags = ["fake", "mock", "dummy", "tag1"].slice(0, Math.floor(Math.random() * 3) + 1)
     return post
