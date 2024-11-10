@@ -1,7 +1,6 @@
 # MegaMap
 
 [![wakatime](https://wakatime.com/badge/user/018b859f-13fa-41e2-9883-185549942dff/project/018bbdef-9ad5-44b2-a07f-56a02612b0e9.svg)](https://wakatime.com/badge/user/018b859f-13fa-41e2-9883-185549942dff/project/018bbdef-9ad5-44b2-a07f-56a02612b0e9)
-[![npm version](https://badge.fury.io/js/megamap.svg)](https://badge.fury.io/js/megamap)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 ![Build Status](https://github.com/l422y/megamap/actions/workflows/main.yml/badge.svg)
 
@@ -12,8 +11,74 @@ ideal for sophisticated mapping solutions where enhanced control over data stora
 
 Ideally, this library is meant to be used in conjunction with a data store (e.g. a database, API, etc.),
 and/or state management solution, such as [pinia](https://github.com/vuejs/pinia). 
+# MegaMap
+
+A TypeScript-first map implementation that handles loading, caching, searching, filtering, and reactivity.
+
+## Quick Start
+
+```typescript
+import { MegaMap, ReactiveMegaMap } from 'megamap'
+
+// Basic loading and caching
+const posts = new MegaMap({
+  loadOne: (id) => fetch(`/api/posts/${id}`).then(r => r.json()),
+  loadAll: () => fetch('/api/posts').then(r => r.json()),
+  expiryInterval: 5000, // Cache expires after 5 seconds
+})
+
+// Load and cache automatically
+await posts.get('123')  // Fetches from API
+await posts.get('123')  // Returns from cache
+await posts.get('123')  // After 5s, fetches fresh data
+
+// Enable search functionality
+const searchablePosts = new MegaMap({
+  ...postsConfig,
+  searchableFields: ['title', 'content', 'tags']
+})
+
+// Fuzzy search across all loaded items
+const results = searchablePosts.searchItems('typescript')
+
+// Maintain filtered sublists automatically
+const organizedPosts = new MegaMap({
+  ...postsConfig,
+  subListFilters: {
+    published: post => post.status === 'published',
+    draft: post => post.status === 'draft',
+    recent: post => isWithinLast7Days(post.date)
+  }
+})
+
+// Access filtered lists
+console.log(organizedPosts.subLists.published)  // Array of published posts
+console.log(organizedPosts.subLists.draft)     // Array of drafts
+console.log(organizedPosts.subLists.recent)    // Recent posts
+
+// Make it reactive (Vue.js)
+const reactivePosts = new ReactiveMegaMap({
+  loadOne: (id) => fetch(`/api/posts/${id}`).then(r => r.json()),
+  loadAll: () => fetch('/api/posts').then(r => r.json()),
+  subListFilters: {
+    published: post => post.status === 'published',
+    draft: post => post.status === 'draft'
+  }
+})
+
+// Now it's Vue reactive - changes trigger component updates
+reactivePosts.set('123', { title: 'Updated' })
+```
 
 ## Features
+
+TL;DR:
+
+- 🚀 Automatic loading & caching
+- 🔍 Built-in fuzzy search (via Fuse.js)
+- 🔄 Auto-maintained filtered lists
+- ⚡️ Vue.js reactivity (via ReactiveMegaMap)
+- 📦 TypeScript-first
 
 MegaMap provides a suite of TypeScript classes for advanced key-value mapping, each offering unique capabilities:
 
