@@ -46,39 +46,7 @@ npm install megamap
 ## Usage
 
 In the examples below we are implementing things outside of state management, and in
-a vue template directly. This is not recommended for production use, but is done here for the sake of simplicity.
-
-For these examples, we will set up some fake data loader functions:
-
-```typescript
-// define a type for our fake data
-type TFakePost = {
-    _id: string,
-    data: string,
-    status: "active" | "draft" | "inactive"
-}
-
-// load a single record by key
-const fakeRecordLoad = async (key: string) => Promise.resolve<TFakePost>({
-    _id: key,
-    data: `data: ${key}`,
-    status: ["active", "draft", "inactive"][Math.floor(Math.random() * 3)]
-})
-
-// load all records
-const fakeMultipleRecordLoad = async () => () => Promise.resolve<TFakePost[]>([
-    {_id: "key1", data: "value1", status: "active"},
-    {_id: "key2", data: "value2", status: "inactive"},
-    {_id: "key3", data: "value3", status: "inactive"},
-    {_id: "key4", data: "value4", status: "draft"},
-    {_id: "key5", data: "value5", status: "draft"},
-    {_id: "key6", data: "value6", status: "draft"},
-    {_id: "key7", data: "value7", status: "draft"},
-    {_id: "key8", data: "value8", status: "draft"},
-])
-
-```
-
+a vue template directly. This is not recommended for production use, but is done here for the sake of simplicity. We are also using some fake data loader functions, [check those out here](FAKELOADERS.md).
 ### Named Queries
 
 We'll also set up some named queries, these are basically stored functions that can be called on the MegaMap instance,
