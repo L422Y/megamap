@@ -1,144 +1,101 @@
 <template>
-  <div v-if="megaMap.subLists" class="relative flex min-h-screen flex-col p-4">
-    <h1>MegaMap Playground</h1>
+  <div class="container mx-auto p-4">
+    <!-- Header Card -->
+    <div class="bg-white rounded-lg shadow mb-8 p-6">
+      <h1 class="text-2xl font-bold">MegaMap Playground</h1>
+      <p class="text-gray-500">Explore LoadableMap, CachedLoadableMap, MegaMap, and ReactiveMegaMap features</p>
+    </div>
 
-    <button class="button" @click="getRandomArticle">
-      <span>Get Random Article</span>
-    </button>
-    <fieldset>
-      <legend>Articles</legend>
-      <div>
-        <h2>Published</h2>
-        <section>
-          <PlaygroundPost v-for="item in megaMap.subLists.published" :key="item._id" :item="item"/>
-        </section>
-      </div>
-      <div>
-        <h2>Drafts</h2>
-        <section>
-          <PlaygroundPost v-for="item in megaMap.subLists.draft" :key="item._id" :item="item"/>
+    <!-- Tab Navigation -->
+    <div class="mb-6 border-b border-gray-200">
+      <nav class="flex -mb-px">
+        <button v-for="tab in tabs"
+                :key="tab.key"
+                @click="activeTab = tab.key"
+                :class="[
+                  'px-4 py-2 font-medium',
+                  activeTab === tab.key
+                    ? 'border-b-2 border-blue-500 text-blue-600'
+                    : 'text-gray-500 hover:text-gray-700'
+                ]">
+          {{ tab.label }}
+        </button>
+      </nav>
+    </div>
 
-        </section>
-      </div>
-    </fieldset>
-
-    <fieldset>
-      <legend>Named Queries</legend>
-      <div>
-        <h2>By Author</h2>
-        <section>
-          <PlaygroundPost v-for="item in authorPosts" :key="item._id" :item="item"/>
-        </section>
-      </div>
-      <div>
-        <h2>By Tag</h2>
-        <select v-model="selectedTag">
-          <option v-for="tag in ['fake','mock','dummy']" :key="tag" :value="tag">
-            {{ tag }}
-          </option>
-        </select>
-        <section>
-          <PlaygroundPost v-for="item in taggedPosts" :key="item._id" :item="item"/>
-        </section>
-      </div>
-    </fieldset>
+    <!-- Map Tabs -->
+    <LoadableMapTab v-if="activeTab === 'loadable'" v-model:loadableMap="loadableMap"/>
+    <CachedLoadableMapTab v-if="activeTab === 'cached'" v-model:cachedMap="cachedMap"/>
+    <MegaMapTab v-if="activeTab === 'mega'" v-model:megaMap="megaMap"/>
+    <ReactiveMegaMapTab v-if="activeTab === 'reactive'" v-model:reactiveMap="reactiveMap"/>
   </div>
 </template>
 
 <script setup>
-import {ReactiveMegaMap} from "megamap"
-import {ref} from "vue"
-import {watch} from "vue"
-import PlaygroundPost from "./PlaygroundPost.vue"
+import { ref, onMounted } from "vue"
+import { LoadableMap, CachedLoadableMap, MegaMap, ReactiveMegaMap } from "megamap"
+import LoadableMapTab from "./components/LoadableMapTab.vue"
+import CachedLoadableMapTab from "./components/CachedLoadableMapTab.vue"
+import MegaMapTab from "./components/MegaMapTab.vue"
+import ReactiveMegaMapTab from "./components/ReactiveMegaMapTab.vue"
 
-const selectedTag = ref("fake")
+// Tab configuration
+const activeTab = ref("loadable")
+const tabs = [
+ {key: "loadable", label: "LoadableMap"},
+ {key: "cached", label: "CachedLoadableMap"},
+ {key: "mega", label: "MegaMap"},
+ {key: "reactive", label: "ReactiveMegaMap"}
+]
 
-const megaMap = new ReactiveMegaMap({
-  loadOne: async (key) => await fetch(`/api/posts/by-id/${key}`).then(res => res.json()),
-  loadAll: async () => await fetch("/api/posts").then(res => res.json()),
-  subListFilters: {
-    published: (item) => item.status === "published",
-    draft: (item) => item.status === "draft",
-  },
-  namedQueries: {
-    byAuthor: async (authorId) => {
-      return fetch(`/api/posts/by-author/${authorId}`).then(res => res.json())
-    },
-    byTag: async (tag) => {
-      return fetch(`/api/posts/by-tag/${tag}`).then(res => res.json())
-    },
-  }
+// Initialize maps
+const loadableMap = new LoadableMap({
+ loadOne: async (key) => await fetch(`/api/posts/by-id/${key}`).then(res => res.json()),
+ loadAll: async () => await fetch("/api/posts").then(res => res.json())
 })
 
-const authorPosts = ref(await megaMap.query.byAuthor("00001"))
-const taggedPosts = ref(await megaMap.query.byTag(selectedTag.value))
+const cachedMap = new CachedLoadableMap({
+ loadOne: async (key) => await fetch(`/api/posts/by-id/${key}`).then(res => res.json()),
+ loadAll: async () => await fetch("/api/posts").then(res => res.json()),
+ expiryInterval: 5000 // 5 seconds for demo purposes
+})
 
+const megaMap = new MegaMap({
+ loadOne: async (key) => await fetch(`/api/posts/by-id/${key}`).then(res => res.json()),
+ loadAll: async () => await fetch("/api/posts").then(res => res.json()),
+ searchableFields: ["title", "content", "tags"],
+ subListFilters: {
+  published: (item) => item.status === "published",
+  draft: (item) => item.status === "draft"
+ }
+})
 
-watch(selectedTag, async (newValue) => taggedPosts.value = await megaMap.query.byTag(newValue))
+const reactiveMap = new ReactiveMegaMap({
+ loadOne: async (key) => await fetch(`/api/posts/by-id/${key}`).then(res => res.json()),
+ loadAll: async () => await fetch("/api/posts").then(res => res.json()),
+ subListFilters: {
+  published: (item) => item.status === "published",
+  draft: (item) => item.status === "draft"
+ }
+})
 
-const getRandomArticle = async () => {
-  await megaMap.get(`key${Math.floor(Math.random() * 1000) + 1}`)
-}
-
+// Initialize all maps
+onMounted(async () => {
+ await Promise.all([
+  loadableMap.getAll(),
+  megaMap.getAll(),
+  reactiveMap.getAll()
+ ])
+})
 </script>
 
-<style>
-
-body {
-  font-family: sans-serif;
-  padding: 1rem;
+<style scoped>
+.container {
+    max-width: 1200px;
 }
 
-section {
-  display: grid;
-  grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));
-  flex-wrap: wrap;
-  gap: 1rem;
-
-}
-
-article {
-  border: 1px solid #ccc;
-  overflow: scroll;
-  min-height: 5rem;
-  height: 5rem;
-  padding: 0 1rem;
-  resize: vertical;
-}
-
-
-button {
-  margin: 1rem 0;
-  padding: 0.5rem 0.9rem;
-  border: 1px solid #ccc;
-  border-radius: 2rem;
-  cursor: pointer;
-  transition: background .2s;
-}
-
-button:hover {
-  background: #ccc;
-}
-
-fieldset {
-  margin: 1rem 0;
-  padding: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 1rem;
-}
-
-legend {
-  font-size: 1.2rem;
-  font-weight: bold;
-  margin-bottom: 1rem;
-}
-
-h2 {
-  margin-top: 0;
-  margin-bottom: 0.5rem;
-}
-
-fieldset + fieldset {
-  margin-top: 2rem;
+pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
 }
 </style>
