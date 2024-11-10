@@ -97,7 +97,7 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
       for (const field of this._searchableFields) {
         if (field in item) {
           const val = item[field as keyof typeof item] as string
-          if (val.toLowerCase().includes(query.toLowerCase())) {
+          if (String(val).toLowerCase().includes(query.toLowerCase())) {
             return true
           }
         }
