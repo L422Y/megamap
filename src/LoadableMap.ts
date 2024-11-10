@@ -40,7 +40,7 @@ export class LoadableMap<K extends string, V extends RefreshableRecord> {
   private readonly _namedQueryData: Record<any, V | V[]> = {}
   private _refreshInterval?: number
   private _refreshIntervalId?: number
-  private refreshedAtMap: Record<K, Date> = {} as Record<K, Date>
+  protected refreshedAtMap: Record<K, Date> = {} as Record<K, Date>
   /** event handling **/
 
 

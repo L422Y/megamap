@@ -1,6 +1,6 @@
 import { LoadableMap, LoadableMapOptions } from "./LoadableMap"
 
-export type CachedLoadableMapOptions<K, V> = {
+export type CachedLoadableMapOptions<K extends string, V> = {
     loadOne: (key: string) => Promise<V | undefined>
     loadAll?: () => Promise<V[] | Record<string, V>>
     expiryInterval?: number
@@ -8,7 +8,7 @@ export type CachedLoadableMapOptions<K, V> = {
 } & LoadableMapOptions<K, V>
 
 // composable for caching loadable map
-export function useCachedLoadableMap<K, V extends Record<string, any>>(opts: CachedLoadableMapOptions<K, V>) {
+export function useCachedLoadableMap<K extends string, V extends Record<string, any>>(opts: CachedLoadableMapOptions<K, V>) {
     return new CachedLoadableMap<K, V>(opts)
 }
 export class CachedLoadableMap<K, V extends Record<string, any>> extends LoadableMap<string, V> {

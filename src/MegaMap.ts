@@ -3,7 +3,7 @@ import { CachedLoadableMap, CachedLoadableMapOptions } from "./CachedLoadableMap
 import Fuse from "fuse.js"
 import { MaybeRef } from "vue"
 
-export type MegaMapOptions<K, V> = {
+export type MegaMapOptions<K extends string, V> = {
   loadOne: (key: string) => Promise<V | undefined>
   loadAll?: () => Promise<Record<string, V> | V[]>
   expiryInterval?: number, keyProperty?: string
@@ -16,7 +16,7 @@ export type MegaMapOptions<K, V> = {
 } & CachedLoadableMapOptions<K, V>
 
 
-export function useMegaMap<K, V extends Record<string, any>>(opts: MegaMapOptions<K, V>) {
+export function useMegaMap<K extends string, V extends Record<string, any>>(opts: MegaMapOptions<K, V>) {
   return new MegaMap<K, V>(opts)
 }
 
