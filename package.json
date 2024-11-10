@@ -8,7 +8,9 @@
     "test": "jest --verbose",
     "build": "tsc",
     "watch": "tsc -w",
-    "prepublish": "npm run build"
+    "prepublish": "npm run build",
+    "playground:serve": "cd playground && pnpm run serve",
+    "playground:build": "cd playground && pnpm run build"
   },
   "repository": {
     "type": "git",
