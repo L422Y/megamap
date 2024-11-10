@@ -12,11 +12,9 @@ export class ReactiveMegaMap<K, V extends Record<string, any>> extends MegaMap<K
 
     set subLists(value: MaybeRef<Record<string, V[]>>) {
         this._subLists = value
-        // triggerRef(this._subLists)
     }
 
     async init(opts: MegaMapOptions<string, V>) {
-
         this._map = reactive(this._map)
         this._subLists = reactive({})
 
@@ -29,7 +27,7 @@ export class ReactiveMegaMap<K, V extends Record<string, any>> extends MegaMap<K
 
     updateSubLists() {
         for (const [filterKey, filter] of Object.entries(this._subListFilters)) {
-            this._subLists[filterKey] = [...this.values()].filter(filter)
+            this._subLists[filterKey] = Object.values(this._map).filter(filter)
         }
     }
 
@@ -38,7 +36,6 @@ export class ReactiveMegaMap<K, V extends Record<string, any>> extends MegaMap<K
         loadingBy: false,
         loadingQuery: false
     })
-
 
     public readonly hasLoadedOnce = reactive({
         all: false,

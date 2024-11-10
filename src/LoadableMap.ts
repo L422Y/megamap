@@ -1,8 +1,6 @@
-// import { computed, reactive, ref } from "vue"
-
-export interface LoadableMapOptions<K, V> {
-    loadOne: (key: string) => Promise<V | undefined>,
-    loadAll?: () => Promise<V[] | Map<string, V>>,
+export interface LoadableMapOptions<K extends string, V> {
+    loadOne: (key: K) => Promise<V | undefined>,
+    loadAll?: () => Promise<V[] | Record<K, V>>,
     keyProperty?: string,
     onUpdated?: () => void
     namedQueries?: Record<string, (queryName: string, ...args: any[]) => Promise<V | V[] | undefined>>
@@ -13,23 +11,23 @@ export type WithKeyProperty<K extends string | number | symbol, V> = V & Record<
 
 type RefreshableRecord = Record<string, any & { refreshed_at: Date }>
 
-export class LoadableMap<K, V extends RefreshableRecord> {
+export class LoadableMap<K extends string, V extends RefreshableRecord> {
     readonly [Symbol.toStringTag]: string = "LoadableMap"
     keyProperty: string
-    protected _map: Map<string, V> = new Map<string, V>()
-    protected loading: Map<string, Promise<V | undefined>> = new Map<string, Promise<V | undefined>>()
-    protected loadingQuery: Map<string, Promise<V | V[] | undefined>> = new Map<string, Promise<V | V[] | undefined>>()
-    protected loadingAll: Promise<Map<string, any> | undefined> | undefined
-    protected loadingBy: Map<string, Promise<V | undefined>> = new Map<string, Promise<V | undefined>>()
-    protected readonly loadOne: (key: string) => Promise<V | undefined>
-    private readonly loadAll?: () => Promise<V[] | Map<string, RefreshableRecord>>
+    protected _map: Record<K, V> = {} as Record<K, V>
+    protected loading: Record<K, Promise<V | undefined>> = {} as Record<K, Promise<V | undefined>>
+    protected loadingQuery: Record<string, Promise<V | V[] | undefined>> = {} as Record<string, Promise<V | V[] | undefined>>
+    protected loadingAll: Promise<Record<K, any> | undefined> | undefined
+    protected loadingBy: Record<string, Promise<V | undefined>> = {} as Record<string, Promise<V | undefined>>
+    protected readonly loadOne: (key: K) => Promise<V | undefined>
+    private readonly loadAll?: () => Promise<V[] | Record<K, RefreshableRecord>>
     protected readonly _namedQueries?: Record<string, (...args: any[]) => Promise<V | V[] | undefined>>
     private readonly _namedQueryData: Record<any, V | V[]> = {}
     protected readonly _queryExecutors: Record<string, (...args: any[]) => Promise<V | V[] | undefined>> = {}
     private _refreshInterval?: number
     private _refreshIntervalId?: number
 
-    constructor(opts: LoadableMapOptions<string, V>) {
+    constructor(opts: LoadableMapOptions<K, V>) {
         if (!opts.loadOne) {
             throw new Error("loadOne function is not defined, at minimum loadOne function must be defined")
         }
@@ -61,11 +59,11 @@ export class LoadableMap<K, V extends RefreshableRecord> {
 
     private _updateLoadingStatus() {
         this.isLoading.all = this.loadingAll !== undefined
-        this.isLoading.loadingBy = this.loadingBy.size > 0
-        this.isLoading.loadingQuery = this.loadingQuery.size > 0
+        this.isLoading.loadingBy = Object.keys(this.loadingBy).length > 0
+        this.isLoading.loadingQuery = Object.keys(this.loadingQuery).length > 0
         this.hasLoadedOnce.all ||= this.loadingAll !== undefined
-        this.hasLoadedOnce.loadingBy ||= this.loadingBy.size > 0
-        this.hasLoadedOnce.loadingQuery ||= this.loadingQuery.size > 0
+        this.hasLoadedOnce.loadingBy ||= Object.keys(this.loadingBy).length > 0
+        this.hasLoadedOnce.loadingQuery ||= Object.keys(this.loadingQuery).length > 0
     }
 
     public readonly isLoading = {
@@ -84,11 +82,11 @@ export class LoadableMap<K, V extends RefreshableRecord> {
      * Returns the number of items in the map
      */
     get size(): number {
-        return this._map.size
+        return Object.keys(this._map).length
     }
 
     /**
-     * Returns a reference to the internal Map object
+     * Returns a reference to the internal Record object
      */
     get value() {
         return this._map
@@ -108,17 +106,17 @@ export class LoadableMap<K, V extends RefreshableRecord> {
     onUpdated: () => void = () => {
     }
 
-    public async get(key: string): Promise<V | undefined> {
+    public async get(key: K): Promise<V | undefined> {
         if (key === undefined) {
             throw new Error("Key is undefined")
         }
 
-        if (this.loading.has(key)) {
-            return this.loading.get(key)
+        if (this.loading[key]) {
+            return this.loading[key]
         }
 
-        if (this._map.has(key)) {
-            return this._map.get(key)
+        if (this._map[key]) {
+            return this._map[key]
         }
 
         const result = new Promise<V | undefined>((resolve) => {
@@ -128,7 +126,7 @@ export class LoadableMap<K, V extends RefreshableRecord> {
                     this.processLoadResult([result]).then(() => {
                         resolve(result)
                     })
-                    this.loading.delete(key)
+                    delete this.loading[key]
                     this.emit("updated")
                     return result
                 }).catch((err) => {
@@ -137,7 +135,7 @@ export class LoadableMap<K, V extends RefreshableRecord> {
             })
         })
 
-        this.loading.set(key, result)
+        this.loading[key] = result
 
         if (result) {
             this.emit("updated")
@@ -151,7 +149,7 @@ export class LoadableMap<K, V extends RefreshableRecord> {
      * Loads an item from the map by key, if the item is not found in the map, the loadOne function is called
      * @param key
      */
-    public async load(key: string): Promise<V | undefined> {
+    public async load(key: K): Promise<V | undefined> {
         return await this.get(key)
     }
 
@@ -161,11 +159,10 @@ export class LoadableMap<K, V extends RefreshableRecord> {
      * @param value
      */
     public async getBy(propName: string, value: any): Promise<V | undefined> {
-        const result = [...this._map.values()].find((item) => item[propName] === value)
+        const result = Object.values(this._map).find((item) => item[propName] === value)
         if (result) {
             return result
         }
-        // return await this.loadBy(propName, value)
     }
 
     /**
@@ -173,8 +170,8 @@ export class LoadableMap<K, V extends RefreshableRecord> {
      * @param key
      * @param value
      */
-    set(key: string, value: V) {
-        this._map.set(key, value)
+    set(key: K, value: V) {
+        this._map[key] = value
         this.emit("updated")
         return this
     }
@@ -191,7 +188,7 @@ export class LoadableMap<K, V extends RefreshableRecord> {
      * otherwise the existing map is returned.
      * @param refresh
      */
-    public async getAll(refresh?: boolean): Promise<Map<string, V> | undefined> {
+    public async getAll(refresh?: boolean): Promise<Record<K, V> | undefined> {
         if (!this.loadAll) {
             throw new Error("Load all items function is not defined")
         }
@@ -200,12 +197,12 @@ export class LoadableMap<K, V extends RefreshableRecord> {
             return this.loadingAll
         }
 
-        if (!refresh && this._map.size > 0) {
+        if (!refresh && Object.keys(this._map).length > 0) {
             return this._map
         }
 
         this.loadingAll = new Promise<any>(async (resolve) => {
-            return this.loadAll().then((result: any[] | Map<string, any>) => {
+            return this.loadAll().then((result: any[] | Record<K, any>) => {
                 this.processLoadResult(result).then((result) => {
                     resolve(result)
                 })
@@ -225,71 +222,75 @@ export class LoadableMap<K, V extends RefreshableRecord> {
      * Returns an iterator of values in the map
      */
     values(): IterableIterator<V> {
-        return this._map.values()
+        return Object.values(this._map)[Symbol.iterator]()
     }
 
     /**
      * Returns an iterator of keys in the map
      */
-    keys(): IterableIterator<string> {
-        return this._map.keys()
+    keys(): IterableIterator<K> {
+        return Object.keys(this._map)[Symbol.iterator]() as IterableIterator<K>
     }
 
     /**
      * Returns an iterator of entries in the map
      */
-    entries(): IterableIterator<[string, V]> {
-        return this._map.entries()
+    entries(): IterableIterator<[K, V]> {
+        return Object.entries(this._map)[Symbol.iterator]() as IterableIterator<[K, V]>
     }
 
     /**
      * Returns an iterator of entries in the map
      */
     [Symbol.iterator](): IterableIterator<V> {
-        return this._map.values()
+        return Object.values(this._map)[Symbol.iterator]()
     }
 
-    forEach(callbackfn: (value: V, key: string, map: Map<string, V>) => void, thisArg?: any): void {
-        return this._map.forEach(callbackfn, thisArg)
+    forEach(callbackfn: (value: V, key: K, map: Record<K, V>) => void, thisArg?: any): void {
+        Object.entries(this._map).forEach(([key, value]) => {
+            callbackfn.call(thisArg, value, key as K, this._map)
+        })
     }
 
     /**
-     * Removes all key/value pairs from the Map object.
+     * Removes all key/value pairs from the Record object.
      */
     clear(): void {
-        return this._map.clear()
+        this._map = {} as Record<K, V>
     }
 
     /**
-     * Removes any value associated to the key and returns the value that Map.prototype.has(key) would have previously returned.
+     * Removes any value associated to the key and returns the value that Record.prototype.has(key) would have previously returned.
      * @param key
      */
-    delete(key: string): boolean {
-        if (!this._map.has(key)) {
+    delete(key: K): boolean {
+        if (!this._map[key]) {
             return false
         }
-        return this._map.delete(key)
+        delete this._map[key]
+        return true
     }
 
     /**
-     * Removes any value associated to the key and returns the value that Map.prototype.has(key) would have previously returned.
+     * Removes any value associated to the key and returns the value that Record.prototype.has(key) would have previously returned.
      * @param propName
      * @param value
      */
     deleteBy(propName: string, value: any): boolean {
-        const item = [...this._map.values()].find((item) => item[propName] === value)
+        const item = Object.values(this._map).find((item) => item[propName] === value)
         if (item) {
-            return this._map.delete(item[this.keyProperty])
+            delete this._map[item[this.keyProperty]]
+            return true
         }
         return false
     }
 
     /**
-     * Returns a boolean asserting whether a value has been associated to the key in the Map object or not.
+     * Returns a boolean asserting whether a value has been associated to the key in the Record object or not.
      * @param key
      */
-    has(key: string): boolean {
-        return this._map.has(key)
+    has(key: K): boolean {
+        return this._map[key] !== undefined
     }
 
     /**
@@ -348,17 +349,17 @@ export class LoadableMap<K, V extends RefreshableRecord> {
      * @param result
      * @private
      */
-    private async processLoadResult(result: any[] | Map<string, any>): Promise<Map<string, V>> {
-        if (result instanceof Map) {
-            result.forEach((value, key) => {
+    private async processLoadResult(result: any[] | Record<K, any>): Promise<Record<K, V>> {
+        if (result instanceof Object && !Array.isArray(result)) {
+            Object.entries(result).forEach(([key, value]) => {
                 value.refreshed_at = new Date()
-                this._map.set(this.keyProperty, value as V)
+                this._map[key as K] = value as V
             })
         } else {
-            result.forEach((item: any) => {
+            (result as any[]).forEach((item: any) => {
                 if (!!item) {
                     item.refreshed_at = new Date()
-                    this._map.set(item[this.keyProperty], item as V)
+                    this._map[item[this.keyProperty]] = item as V
                 }
             })
         }

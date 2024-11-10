@@ -6,27 +6,25 @@ type CacheExpiry = {
 
 export type CachedLoadableMapOptions<K, V> = {
     loadOne: (key: string) => Promise<V | undefined>
-    loadAll?: () => Promise<V[] | Map<string, V>>
+    loadAll?: () => Promise<V[] | Record<string, V>>
     expiryInterval?: number
     keyProperty?: string
 } & LoadableMapOptions<K, V>
 
 export class CachedLoadableMap<K, V extends Record<string, any>> extends LoadableMap<string, V> {
     [Symbol.toStringTag]: string = "CachedLoadableMap"
-    private expiryCache: Map<string, CacheExpiry> = new Map<string, CacheExpiry>()
+    private expiryCache: Record<string, CacheExpiry> = {}
     private readonly expiryInterval?: number
     private _cachedQueryExecutors: Record<string, (...args: any[]) => Promise<V | V[]>> = {}
-    private _cachedQueryData: Map<string, V | V[]> = new Map<string, V | V[]>()
+    private _cachedQueryData: Record<string, V | V[]> = {}
 
     constructor(opts: CachedLoadableMapOptions<string, V>) {
         super(opts)
         this.expiryInterval = opts.expiryInterval
 
-
         for (const queryName in this._namedQueries) {
             this._cachedQueryExecutors[queryName] = async (...args: any[]) => this.executeCachedQuery(queryName, ...args)
         }
-
     }
 
     get query(): Record<string, (...args: any[]) => Promise<V | V[]>> {
@@ -34,28 +32,26 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
     }
 
     async executeCachedQuery(queryName: string, ...args: any[]): Promise<V | V[]> {
-
         const queryKey = `${queryName}:${args.join(":")}`
 
-
-        if (this.loadingQuery.has(queryKey)) {
+        if (this.loadingQuery[queryKey]) {
             // LOADING / PENDING
-            return this.loadingQuery.get(queryKey)
+            return this.loadingQuery[queryKey]
         }
 
-        if (this._cachedQueryData.has[queryKey]) {
+        if (this._cachedQueryData[queryKey]) {
             // HIT
-            const cacheExpiry = this.expiryCache.get(queryKey)
+            const cacheExpiry = this.expiryCache[queryKey]
             const now = Date.now()
 
             if (cacheExpiry) {
                 if (cacheExpiry.expiry === -1 || now < cacheExpiry.expiry) {
                     // NOT EXPIRED
-                    return this._cachedQueryData.get(queryKey)
+                    return this._cachedQueryData[queryKey]
                 } else {
                     // EXPIRED
-                    this.expiryCache.delete(queryKey)
-                    this.loadingQuery.delete(queryKey)
+                    delete this.expiryCache[queryKey]
+                    delete this.loadingQuery[queryKey]
                 }
             }
         }
@@ -65,7 +61,7 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
             return result
         })
 
-        this.loadingQuery.set(queryKey, promise)
+        this.loadingQuery[queryKey] = promise
         return promise
     }
 
@@ -74,14 +70,13 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
             throw new Error("Key is undefined")
         }
 
-
-        const cacheExpiry = this.expiryCache.get(key)
+        const cacheExpiry = this.expiryCache[key]
         const now = Date.now()
         if (cacheExpiry) {
             if (cacheExpiry.expiry === -1 || now < cacheExpiry.expiry) {
                 return Promise.resolve(super.get(key))
             } else {
-                this.expiryCache.delete(key)
+                delete this.expiryCache[key]
                 this.loadOne(key).then((result: V | undefined) => {
                     if (result) {
                         this.set(key, result)
@@ -90,9 +85,8 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
             }
         }
 
-
-        if (this.loading.has(key)) {
-            return this.loading.get(key)
+        if (this.loading[key]) {
+            return this.loading[key]
         }
 
         const item = await super.get(key)
@@ -119,8 +113,8 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
             return false
         }
 
-        if (this.expiryCache.has(key)) {
-            this.expiryCache.delete(key)
+        if (this.expiryCache[key]) {
+            delete this.expiryCache[key]
         }
         return super.delete(key)
     }
@@ -128,16 +122,16 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
     deleteBy(propName: string, value: any): boolean {
         const result = super.deleteBy(propName, value)
         if (result) {
-            this.expiryCache.delete(value)
+            delete this.expiryCache[value]
         }
         return result
     }
 
-    public async getAll(refresh ?: boolean): Promise<Map<string, V> | undefined> {
+    public async getAll(refresh ?: boolean): Promise<Record<string, V> | undefined> {
         const items = await super.getAll(refresh)
         if (items) {
-            items.forEach((_, key) => {
-                this.setExpiry(key, items.get(key))
+            Object.keys(items).forEach((key) => {
+                this.setExpiry(key, items[key])
             })
         }
         return items
@@ -145,10 +139,9 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
 
     private setExpiry(key: string, value: V | undefined): void {
         if (value !== undefined) {
-            this.expiryCache.set(key, {
+            this.expiryCache[key] = {
                 expiry: this.expiryInterval ? Date.now() + this.expiryInterval : -1
-            })
+            }
         }
     }
-
 }
