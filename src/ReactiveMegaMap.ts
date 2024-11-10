@@ -2,6 +2,9 @@ import { MegaMap, MegaMapOptions } from "./MegaMap"
 
 import { MaybeRef, reactive } from "vue"
 
+export function useReactiveMegaMap<K, V extends Record<string, any>>(opts: MegaMapOptions<K, V>) {
+    return new ReactiveMegaMap<K, V>(opts)
+}
 export class ReactiveMegaMap<K, V extends Record<string, any>> extends MegaMap<K, V> {
     readonly [Symbol.toStringTag]: string = "ReactiveMegaMap"
     _subLists: MaybeRef<Record<string, V[]>> = reactive({})

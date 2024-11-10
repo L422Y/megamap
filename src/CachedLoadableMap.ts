@@ -11,6 +11,10 @@ export type CachedLoadableMapOptions<K, V> = {
     keyProperty?: string
 } & LoadableMapOptions<K, V>
 
+// composable for caching loadable map
+export function useCachedLoadableMap<K, V extends Record<string, any>>(opts: CachedLoadableMapOptions<K, V>) {
+    return new CachedLoadableMap<K, V>(opts)
+}
 export class CachedLoadableMap<K, V extends Record<string, any>> extends LoadableMap<string, V> {
     [Symbol.toStringTag]: string = "CachedLoadableMap"
     private expiryCache: Record<string, CacheExpiry> = {}

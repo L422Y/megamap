@@ -15,6 +15,10 @@ export type MegaMapOptions<K, V> = {
     reactive?: boolean
 } & CachedLoadableMapOptions<K, V>
 
+
+export function useMegaMap<K, V extends Record<string, any>>(opts: MegaMapOptions<K, V>) {
+    return new MegaMap<K, V>(opts)
+}
 export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap<string, V> {
     [Symbol.toStringTag]: string = "MegaMap"
     public readonly version = 2
