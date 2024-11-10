@@ -5,7 +5,7 @@ import { MaybeRef } from "vue"
 
 export type MegaMapOptions<K, V> = {
     loadOne: (key: string) => Promise<V | undefined>
-    loadAll?: () => Promise<Map<string, V> | V[]>
+    loadAll?: () => Promise<Record<string, V> | V[]>
     expiryInterval?: number, keyProperty?: string
     secondaryMaps?: Array<MegaMap<any, any>>
     filter?: (item: V) => boolean
@@ -56,7 +56,7 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
         })
     }
 
-    public async getAll(refresh?: boolean): Promise<Map<string, V>> {
+    public async getAll(refresh?: boolean): Promise<Record<string, V>> {
         const items = await super.getAll(refresh)
         if (!items) {
             throw new Error("No items found")
@@ -69,31 +69,27 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
             this.set(item[this.keyProperty], item)
         })
         this.secondaryMaps.forEach(map => {
-            // if (isRef(map)) {
-            //     map.value.bulkAdd(items)
-            // } else {
             map.bulkAdd(items)
-            // }
         })
     }
 
     public async addSecondaryMap(map: MegaMap<string, V>) {
         this.secondaryMaps.push(map)
-        await map.bulkAdd(Array.from(this._map.values()))
+        await map.bulkAdd(Object.values(this._map))
     }
 
     public filterItems(criteria: (value: V) => boolean): V[] {
-        return [...this.values()].filter((value) => criteria(value))
+        return Object.values(this._map).filter((value) => criteria(value))
     }
 
     public sortItems(comparator: (a: V, b: V) => number): V[] {
-        return [...this.values()].sort(comparator)
+        return Object.values(this._map).sort(comparator)
     }
 
     public searchItems(query: string): V[] {
         let results: V[] = []
         // first try exact matches
-        results = [...this.values()].filter((item: V) => {
+        results = Object.values(this._map).filter((item: V) => {
             for (const field of this._searchableFields) {
                 if (field in item) {
                     const val = item[field as keyof typeof item] as string
@@ -107,7 +103,7 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
 
         // if no exact matches, do fuzzy search
         if (results.length === 0) {
-            const fuse = new Fuse(Array.from(this.values()), {
+            const fuse = new Fuse(Object.values(this._map), {
                 keys: this._searchableFields, threshold: 0.5
             })
             try {
@@ -126,8 +122,6 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
         this.notifyMapUpdated()
         return this
     }
-
-    // SUB LISTS
 
     public delete(key: string): boolean {
         const result = super.delete(key)
@@ -157,7 +151,7 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
 
     updateSubLists() {
         for (const [filterKey, filter] of Object.entries(this._subListFilters)) {
-            this._subLists[filterKey] = [...this.values()].filter(filter)
+            this._subLists[filterKey] = Object.values(this._map).filter(filter)
         }
     }
 
@@ -176,4 +170,3 @@ export class MegaMap<K, V extends Record<string, any>> extends CachedLoadableMap
         })
     }
 }
-
