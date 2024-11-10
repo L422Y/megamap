@@ -70,6 +70,69 @@ const reactivePosts = new ReactiveMegaMap({
 reactivePosts.set('123', { title: 'Updated' })
 ```
 
+## Vue.js Example
+
+```vue
+<!-- PostManager.vue -->
+<template>
+  <div class="space-y-4">
+    <!-- Search -->
+    <input v-model="search" placeholder="Search posts..." />
+    
+    <!-- Posts Lists -->
+    <div class="grid grid-cols-2 gap-4">
+      <div>
+        <h2>Published ({{ postsMap.subLists.published.length }})</h2>
+        <div v-for="post in postsMap.subLists.published" :key="post.id">
+          {{ post.title }}
+        </div>
+      </div>
+      <div>
+        <h2>Drafts ({{ postsMap.subLists.draft.length }})</h2>
+        <div v-for="post in postsMap.subLists.draft" :key="post.id">
+          {{ post.title }}
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import { ReactiveMegaMap } from 'megamap'
+
+interface Post {
+  id: string
+  title: string
+  status: 'draft' | 'published'
+}
+
+const search = ref('')
+const postsMap = new ReactiveMegaMap<string, Post>({
+  loadOne: (id) => fetch(`/api/posts/${id}`).then(r => r.json()),
+  loadAll: () => fetch('/api/posts').then(r => r.json()),
+  searchableFields: ['title'],
+  subListFilters: {
+    published: post => post.status === 'published',
+    draft: post => post.status === 'draft'
+  }
+})
+
+onMounted(() => postsMap.getAll())
+
+// Update a post - UI automatically updates
+const publishPost = (id: string) => {
+  postsMap.set(id, { ...postsMap.value[id], status: 'published' })
+}
+</script>
+```
+
+This example shows:
+- 🔄 Automatic reactive sublists
+- 🔍 Built-in search
+- ⚡️ TypeScript support
+- 📱 Simple grid layout
+
 ## Features
 
 TL;DR:
