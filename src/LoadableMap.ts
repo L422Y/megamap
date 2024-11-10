@@ -9,7 +9,7 @@ export interface LoadableMapOptions<K extends string, V> {
 
 export type WithKeyProperty<K extends string | number | symbol, V> = V & Record<string, any>;
 
-type RefreshableRecord = Record<string, any & { refreshed_at: Date }>
+type RefreshableRecord = Record<string, any>
 
 export function useLoadableMap<K extends string, V extends RefreshableRecord>(opts: LoadableMapOptions<K, V>) {
   return new LoadableMap<K, V>(opts)
@@ -40,6 +40,7 @@ export class LoadableMap<K extends string, V extends RefreshableRecord> {
   private readonly _namedQueryData: Record<any, V | V[]> = {}
   private _refreshInterval?: number
   private _refreshIntervalId?: number
+  private refreshedAtMap: Record<K, Date> = {} as Record<K, Date>
   /** event handling **/
 
 
@@ -169,6 +170,7 @@ export class LoadableMap<K extends string, V extends RefreshableRecord> {
    */
   set(key: K, value: V) {
     this._map[key] = value
+    this.refreshedAtMap[key] = new Date()
     this.emit("updated")
     return this
   }
@@ -254,6 +256,7 @@ export class LoadableMap<K extends string, V extends RefreshableRecord> {
    */
   clear(): void {
     this._map = {} as Record<K, V>
+    this.refreshedAtMap = {} as Record<K, Date>
   }
 
   /**
@@ -265,6 +268,7 @@ export class LoadableMap<K extends string, V extends RefreshableRecord> {
       return false
     }
     delete this._map[key]
+    delete this.refreshedAtMap[key]
     return true
   }
 
@@ -277,6 +281,7 @@ export class LoadableMap<K extends string, V extends RefreshableRecord> {
     const item = Object.values(this._map).find((item) => item[propName] === value)
     if (item) {
       delete this._map[item[this.keyProperty]]
+      delete this.refreshedAtMap[item[this.keyProperty]]
       return true
     }
     return false
@@ -394,19 +399,27 @@ export class LoadableMap<K extends string, V extends RefreshableRecord> {
   private async processLoadResult(result: any[] | Record<K, any>): Promise<Record<K, V>> {
     if (result instanceof Object && !Array.isArray(result)) {
       Object.entries(result).forEach(([key, value]) => {
-        value.refreshed_at = new Date()
         this._map[key as K] = value as V
+        this.refreshedAtMap[key as K] = new Date()
       })
     } else {
       ( result as any[] ).forEach((item: any) => {
         if (!!item) {
-          item.refreshed_at = new Date()
           this._map[item[this.keyProperty]] = item as V
+          this.refreshedAtMap[item[this.keyProperty]] = new Date()
         }
       })
     }
     this.loadingAll = undefined
     this.emit("updated")
     return this._map
+  }
+
+  /**
+   * Retrieves the refresh time for a given key
+   * @param key
+   */
+  public getRefreshedAt(key: K): Date | undefined {
+    return this.refreshedAtMap[key]
   }
 }
