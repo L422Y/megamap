@@ -27,7 +27,6 @@ describe("LoadableMap", () => {
 
         expect(item._id).toBe("key1")
         expect(item.data).toBe("Data for key1")
-        expect(item).toHaveProperty("refreshed_at")
 
         expect(loadableMap["_map"].has("key1")).toBeTruthy()
     })
@@ -52,11 +51,22 @@ describe("LoadableMap", () => {
 
         expect(item1?._id).toBe("key1")
         expect(item1?.data).toBe("value1")
-        expect(item1).toHaveProperty("refreshed_at")
 
         expect(item2?._id).toBe("key2")
         expect(item2?.data).toBe("value2")
-        expect(item2).toHaveProperty("refreshed_at")
 
+    })
+
+    test("should retrieve refreshedAt time for a key", async () => {
+        await loadableMap.get("key1")
+        const refreshedAt = loadableMap.getRefreshedAt("key1")
+        expect(refreshedAt).toBeInstanceOf(Date)
+    })
+
+    test("should update refreshedAtMap for refresh times", async () => {
+        await loadableMap.get("key1")
+        const refreshedAt = loadableMap.getRefreshedAt("key1")
+        expect(refreshedAt).toBeInstanceOf(Date)
+        expect(loadableMap["refreshedAtMap"]["key1"]).toEqual(refreshedAt)
     })
 })

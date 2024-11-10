@@ -28,10 +28,10 @@ describe("CachedLoadableMap", () => {
         expect(mockLoadOneFunction).toHaveBeenCalledWith("key1")
         expect(item._id).toBe("key1")
         expect(item.data).toBe("Data for key1")
-        expect(item).toHaveProperty("refreshed_at")
 
-        expect(cachedLoadableMap["expiryCache"].has("key1")).toBeTruthy()
-        expect(cachedLoadableMap["expiryCache"].get("key1")?.expiry).toBeGreaterThan(Date.now())
+        const refreshedAt = cachedLoadableMap.getRefreshedAt("key1")
+        expect(refreshedAt).toBeInstanceOf(Date)
+        expect(cachedLoadableMap["refreshedAtMap"]["key1"]).toEqual(refreshedAt)
     })
 
     test("should call loadOne function again if item is expired", async () => {
@@ -47,8 +47,8 @@ describe("CachedLoadableMap", () => {
         const items = await cachedLoadableMap.getAll()
         expect(mockLoadAllFunction).toHaveBeenCalled()
         expect(items?.size).toBe(2)
-        expect(cachedLoadableMap["expiryCache"].get("key1")?.expiry).toBeGreaterThan(Date.now())
-        expect(cachedLoadableMap["expiryCache"].get("key2")?.expiry).toBeGreaterThan(Date.now())
+        expect(cachedLoadableMap["refreshedAtMap"]["key1"]).toBeInstanceOf(Date)
+        expect(cachedLoadableMap["refreshedAtMap"]["key2"]).toBeInstanceOf(Date)
     })
 
     // Additional tests can be added as needed
