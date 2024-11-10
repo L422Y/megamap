@@ -7,10 +7,10 @@ export type CachedLoadableMapOptions<K extends string, V> = {
     keyProperty?: string
 } & LoadableMapOptions<K, V>
 
-// composable for caching loadable map
 export function useCachedLoadableMap<K extends string, V extends Record<string, any>>(opts: CachedLoadableMapOptions<K, V>) {
     return new CachedLoadableMap<K, V>(opts)
 }
+
 export class CachedLoadableMap<K, V extends Record<string, any>> extends LoadableMap<string, V> {
     [Symbol.toStringTag]: string = "CachedLoadableMap"
     private readonly expiryInterval?: number
@@ -34,30 +34,22 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
         const queryKey = `${queryName}:${args.join(":")}`
 
         if (this.loadingQuery[queryKey]) {
-            // LOADING / PENDING
             return this.loadingQuery[queryKey]
         }
 
-        if (this._cachedQueryData[queryKey]) {
-            // HIT
-            const cacheExpiry = this.refreshedAtMap[queryKey]
-            const now = Date.now()
+        const cacheExpiry = this.refreshedAtMap[queryKey]
+        const now = Date.now()
 
-            if (cacheExpiry) {
-                if (this.expiryInterval === undefined || now < cacheExpiry.getTime() + this.expiryInterval) {
-                    // NOT EXPIRED
-                    return this._cachedQueryData[queryKey]
-                } else {
-                    // EXPIRED
-                    delete this.refreshedAtMap[queryKey]
-                    delete this.loadingQuery[queryKey]
-                }
+        if (this._cachedQueryData[queryKey] && cacheExpiry) {
+            if (this.expiryInterval === undefined || now < cacheExpiry.getTime() + this.expiryInterval) {
+                return this._cachedQueryData[queryKey]
             }
         }
-        // MISS
-        const promise = this._queryExecutors[queryName](queryName, ...args).then((result: V | V[]) => {
+
+        const promise = this._namedQueries[queryName](queryName, ...args).then((result: V | V[]) => {
             this._cachedQueryData[queryKey] = result
             this.refreshedAtMap[queryKey] = new Date()
+            delete this.loadingQuery[queryKey]
             return result
         })
 
@@ -127,7 +119,7 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
         return result
     }
 
-    public async getAll(refresh ?: boolean): Promise<Record<string, V> | undefined> {
+    public async getAll(refresh?: boolean): Promise<Record<string, V> | undefined> {
         const items = await super.getAll(refresh)
         if (items) {
             Object.keys(items).forEach((key) => {
