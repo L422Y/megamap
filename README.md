@@ -15,6 +15,12 @@ ideal for sophisticated mapping solutions where enhanced control over data stora
 Ideally, this library is meant to be used in conjunction with a data store (e.g. a database, API, etc.),
 and/or state management solution, such as [pinia](https://github.com/vuejs/pinia). 
 
+## Demo
+
+I've started creating a demo on usage of the library, you can find the source at [megamap-demo](https://github.com/l422y/megamap-demo)
+
+There's a live demo at [megamap-demo.pages.dev](https://megamap-demo.pages.dev/)
+
 ## Quick Example
 
 ```typescript
