@@ -13,9 +13,9 @@
           {{ loadableMap.isLoading.all ? "Loading..." : "Ready" }}
         </span>
         <button
-            @click="loadRandomItem"
             :disabled="loadableMap.isLoading.all"
             class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+            @click="loadRandomItem"
         >
           Load Random Item
         </button>
@@ -23,7 +23,7 @@
     </div>
 
     <div v-if="currentItem" class="mb-6">
-      <PostCard :item="currentItem" />
+      <PostCard :item="currentItem"/>
     </div>
 
     <div class="grid grid-cols-2 gap-4">
@@ -43,27 +43,27 @@
 </template>
 
 <script setup>
-import PostCard from './PostCard.vue'
+import PostCard from "./PostCard.vue"
 import { LoadableMap } from "megamap"
-import { ref, defineModel, onMounted } from "vue"
+import { ref, onMounted, defineModel } from "vue"
 
-const loadableMap = defineModel("loadableMap", { type: LoadableMap, required: true })
+const loadableMap = defineModel("loadableMap", {type: LoadableMap, required: true})
 const currentItem = ref(null)
 
 const loadableFeatures = [
-  "Async data loading",
-  "Single item loading",
-  "Bulk loading",
-  "Loading state tracking",
-  "Error handling"
+ "Async data loading",
+ "Single item loading",
+ "Bulk loading",
+ "Loading state tracking",
+ "Error handling"
 ]
 
 async function loadRandomItem() {
-  const randomId = `key${Math.floor(Math.random() * 1000) + 1}`
-  currentItem.value = await loadableMap.value.get(randomId)
+ const randomId = `key${Math.floor(Math.random() * 1000) + 1}`
+ currentItem.value = await loadableMap.value.get(randomId)
 }
 
 onMounted(() => {
-  loadableMap.value.getAll()
+ loadableMap.value.getAll()
 })
 </script>

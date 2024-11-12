@@ -11,9 +11,9 @@
       <div class="flex-1">
         <input
             v-model="searchQuery"
-            type="text"
-            placeholder="Search items..."
             class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Search items..."
+            type="text"
         />
       </div>
       <div class="w-48">
@@ -34,40 +34,40 @@
     <div v-if="Object.keys(megaMap.value).length" class="grid grid-cols-2 gap-6">
       <PostCard v-for="item in filteredItems"
                 :key="item._id"
-                :item="item" />
+                :item="item"/>
     </div>
   </div>
 </template>
 
 <script setup>
-import PostCard from './PostCard.vue'
+import PostCard from "./PostCard.vue"
 import { MegaMap } from "megamap"
-import { ref, computed, defineModel, onMounted } from "vue"
+import { ref, computed, onMounted, defineModel } from "vue"
 
-const megaMap = defineModel("megaMap", { type: MegaMap, required: true })
+const megaMap = defineModel("megaMap", {type: MegaMap, required: true})
 const searchQuery = ref("")
 const selectedFilter = ref("")
 
 const filterOptions = [
-  { value: "published", label: "Published" },
-  { value: "draft", label: "Draft" }
+ {value: "published", label: "Published"},
+ {value: "draft", label: "Draft"}
 ]
 
 const filteredItems = computed(() => {
-  let items = Object.values(megaMap.value.value)
+ let items = Object.values(megaMap.value.value)
 
-  if (selectedFilter.value) {
-    items = items.filter(item => item.status === selectedFilter.value)
-  }
+ if (selectedFilter.value) {
+  items = items.filter(item => item.status === selectedFilter.value)
+ }
 
-  if (searchQuery.value) {
-    items = megaMap.value.searchItems(searchQuery.value)
-  }
+ if (searchQuery.value) {
+  items = megaMap.value.searchItems(searchQuery.value)
+ }
 
-  return items
+ return items
 })
 
 onMounted(() => {
-  megaMap.value.getAll()
+ megaMap.value.getAll()
 })
 </script>

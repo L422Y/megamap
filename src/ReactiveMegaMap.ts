@@ -1,7 +1,7 @@
 import { MegaMap, MegaMapOptions } from "./MegaMap"
 
 import { MaybeRef, reactive } from "vue"
-import { LoadingState } from "../src"
+import { LoadingState } from "./LoadableMap"
 
 export function useReactiveMegaMap<K extends string, V extends Record<string, any>>(opts: MegaMapOptions<K, V>) {
   return new ReactiveMegaMap<K, V>(opts)

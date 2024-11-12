@@ -7,20 +7,23 @@
       </div>
       <div class="flex gap-4">
         <button
-            @click="updateReactiveItem"
             class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-2"
+            @click="updateReactiveItem"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            <path
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                stroke-linecap="round" stroke-linejoin="round"
+                stroke-width="2"/>
           </svg>
           <span>Update Random</span>
         </button>
         <button
-            @click="addReactiveItem"
             class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 flex items-center gap-2"
+            @click="addReactiveItem"
         >
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            <path d="M12 6v6m0 0v6m0-6h6m-6 0H6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
           </svg>
           <span>Add New</span>
         </button>
@@ -37,8 +40,8 @@
         </div>
         <div class="space-y-4">
           <PostCard v-for="item in publishedItems"
-                   :key="item._id"
-                   :item="item" />
+                    :key="item._id"
+                    :item="item"/>
         </div>
       </div>
       <div>
@@ -50,8 +53,8 @@
         </div>
         <div class="space-y-4">
           <PostCard v-for="item in draftItems"
-                   :key="item._id"
-                   :item="item" />
+                    :key="item._id"
+                    :item="item"/>
         </div>
       </div>
     </div>
@@ -60,17 +63,17 @@
 
 <script setup>
 import { ReactiveMegaMap } from "megamap"
-import { defineModel, computed } from "vue"
-import PostCard from './PostCard.vue'
+import { computed, defineModel } from "vue"
+import PostCard from "./PostCard.vue"
 
-const reactiveMap = defineModel("reactiveMap", { type: ReactiveMegaMap, required: true })
+const reactiveMap = defineModel("reactiveMap", {type: ReactiveMegaMap, required: true})
 
 const publishedItems = computed(() =>
-  reactiveMap.value.subLists.published?.filter(item => item && item._id) || []
+   reactiveMap.value.subLists.published?.filter(item => item && item._id) || []
 )
 
 const draftItems = computed(() =>
-  reactiveMap.value.subLists.draft?.filter(item => item && item._id) || []
+   reactiveMap.value.subLists.draft?.filter(item => item && item._id) || []
 )
 
 function generateNewItem(id) {
@@ -92,9 +95,9 @@ async function updateReactiveItem() {
   const randomItem = items[Math.floor(Math.random() * items.length)]
   const updatedItem = {
     ...randomItem,
-    title: randomItem.title?.includes('Updated:')
-      ? randomItem.title
-      : `Updated: ${randomItem.title || 'Untitled Post'}`,
+    title: randomItem.title?.includes("Updated:")
+       ? randomItem.title
+       : `Updated: ${randomItem.title || "Untitled Post"}`,
     status: randomItem.status === "published" ? "draft" : "published",
     updatedAt: new Date().toISOString()
   }
