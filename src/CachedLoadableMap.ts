@@ -1,4 +1,4 @@
-import { LoadableMap, LoadableMapOptions } from "./LoadableMap"
+import { LoadableMap, LoadableMapOptions, LoadingState } from "./LoadableMap"
 
 export type CachedLoadableMapOptions<K extends string, V> = {
     loadOne: (key: string) => Promise<V | undefined>

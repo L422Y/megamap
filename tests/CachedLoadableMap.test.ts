@@ -1,4 +1,4 @@
-import { CachedLoadableMap } from "../src/CachedLoadableMap"
+import { CachedLoadableMap, LoadingState } from "../src/CachedLoadableMap"
 
 describe("CachedLoadableMap", () => {
   let cachedMap: CachedLoadableMap<string, { _id: string, data: string }>
@@ -239,6 +239,25 @@ describe("CachedLoadableMap", () => {
       // Next getAll should refresh
       await cachedMap.getAll(true)
       expect(mockLoadAllFunction).toHaveBeenCalled()
+    })
+  })
+
+  describe("auto-refresh expired entries", () => {
+    test("should auto-refresh expired entries when accessed", async () => {
+      // First call should hit the service
+      await cachedMap.get("key1")
+      expect(mockLoadOneFunction).toHaveBeenCalledTimes(1)
+
+      // After expiry, should auto-refresh when accessed
+      jest.advanceTimersByTime(expiryInterval + 100)
+      await cachedMap.get("key1")
+      expect(mockLoadOneFunction).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  describe("loading state enum", () => {
+    test("should use LoadingState enum for isLoading property", () => {
+      expect(cachedMap.isLoading.all).toBe(LoadingState.NOT_LOADED)
     })
   })
 })

@@ -15,18 +15,24 @@ export function useLoadableMap<K extends string, V extends RefreshableRecord>(op
   return new LoadableMap<K, V>(opts)
 }
 
+export enum LoadingState {
+  NOT_LOADED,
+  LOADING,
+  LOADED
+}
+
 export class LoadableMap<K extends string, V extends RefreshableRecord> {
   readonly [Symbol.toStringTag]: string = "LoadableMap"
   keyProperty: string
   public readonly isLoading = {
-    all: false,
-    loadingBy: false,
-    loadingQuery: false
+    all: LoadingState.NOT_LOADED,
+    loadingBy: LoadingState.NOT_LOADED,
+    loadingQuery: LoadingState.NOT_LOADED
   }
   public readonly hasLoadedOnce = {
-    all: false,
-    loadingBy: false,
-    loadingQuery: false
+    all: LoadingState.NOT_LOADED,
+    loadingBy: LoadingState.NOT_LOADED,
+    loadingQuery: LoadingState.NOT_LOADED
   }
   protected _map: Record<K, V> = {} as Record<K, V>
   protected loading: Record<K, Promise<V | undefined>> = {} as Record<K, Promise<V | undefined>>
@@ -354,12 +360,12 @@ export class LoadableMap<K extends string, V extends RefreshableRecord> {
   }
 
   private _updateLoadingStatus() {
-    this.isLoading.all = this.loadingAll !== undefined
-    this.isLoading.loadingBy = Object.keys(this.loadingBy).length > 0
-    this.isLoading.loadingQuery = Object.keys(this.loadingQuery).length > 0
-    this.hasLoadedOnce.all ||= this.loadingAll !== undefined
-    this.hasLoadedOnce.loadingBy ||= Object.keys(this.loadingBy).length > 0
-    this.hasLoadedOnce.loadingQuery ||= Object.keys(this.loadingQuery).length > 0
+    this.isLoading.all = this.loadingAll !== undefined ? LoadingState.LOADING : LoadingState.NOT_LOADED
+    this.isLoading.loadingBy = Object.keys(this.loadingBy).length > 0 ? LoadingState.LOADING : LoadingState.NOT_LOADED
+    this.isLoading.loadingQuery = Object.keys(this.loadingQuery).length > 0 ? LoadingState.LOADING : LoadingState.NOT_LOADED
+    this.hasLoadedOnce.all ||= this.loadingAll !== undefined ? LoadingState.LOADED : LoadingState.NOT_LOADED
+    this.hasLoadedOnce.loadingBy ||= Object.keys(this.loadingBy).length > 0 ? LoadingState.LOADED : LoadingState.NOT_LOADED
+    this.hasLoadedOnce.loadingQuery ||= Object.keys(this.loadingQuery).length > 0 ? LoadingState.LOADED : LoadingState.NOT_LOADED
   }
 
   /**
