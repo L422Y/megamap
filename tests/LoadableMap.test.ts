@@ -1,4 +1,4 @@
-import { LoadableMap } from "../src"
+import { LoadableMap, LoadingState } from "../src"
 
 describe("LoadableMap", () => {
   let loadableMap: LoadableMap<string, { _id: string, data: string }>
@@ -136,6 +136,12 @@ describe("LoadableMap", () => {
       loadableMap.set("key1", {_id: "key1", data: "test"})
       loadableMap.delete("key1")
       expect(loadableMap.getRefreshedAt("key1")).toBeUndefined()
+    })
+  })
+
+  describe("loading state enum", () => {
+    test("should use LoadingState enum for isLoading property", () => {
+      expect(loadableMap.isLoading.all).toBe(LoadingState.NOT_LOADED)
     })
   })
 })
