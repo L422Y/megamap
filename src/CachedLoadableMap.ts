@@ -17,6 +17,11 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
   private _cachedQueryExecutors: Record<string, (...args: any[]) => Promise<V | V[]>> = {}
   private _cachedQueryData: Record<string, V | V[]> = {}
 
+  // Track loading states separately from promises
+  protected loadingStates: Record<string, boolean> = {}
+  // Override loading property from base class
+  protected override loading: Record<string, Promise<V | undefined>> = {}
+
   constructor(opts: CachedLoadableMapOptions<string, V>) {
     super(opts)
     this.expiryInterval = opts.expiryInterval
@@ -30,10 +35,16 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
     return this._cachedQueryExecutors
   }
 
+  // Public method to check if item is loading
+  public isItemLoading(key: string): boolean {
+    return this.loadingStates[key] || false
+  }
+
   async executeCachedQuery(queryName: string, ...args: any[]): Promise<V | V[]> {
     const queryKey = `${queryName}:${args.join(":")}`
 
     try {
+      this.loadingStates[queryKey] = true
       this.isLoading.loadingQuery = LoadingState.LOADING
 
       if (this.loadingQuery[queryKey]) {
@@ -54,30 +65,27 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
         this.refreshedAtMap[queryKey] = new Date()
         delete this.loadingQuery[queryKey]
         return result
-      }).catch((error) => {
-        delete this.loadingQuery[queryKey]
-        throw error
       })
 
       this.loadingQuery[queryKey] = promise
       return promise
     } finally {
+      delete this.loadingStates[queryKey]
       this.isLoading.loadingQuery = LoadingState.LOADED
       this.hasLoadedOnce.loadingQuery = LoadingState.LOADED
-      this._updateLoadingStatus()
+      this.updateLoadingStatus()
     }
   }
 
-  public async get(key: string): Promise<V | undefined> {
+  public override async get(key: string): Promise<V | undefined> {
     if (key === undefined) {
       throw new Error("Key is undefined")
     }
 
     try {
-      // Add loading state for this specific key
-      this.loading[key] = true
+      this.loadingStates[key] = true
       this.isLoading.loadingBy = LoadingState.LOADING
-      this._updateLoadingStatus()
+      this.updateLoadingStatus()
 
       const cacheExpiry = this.refreshedAtMap[key]
       const now = Date.now()
@@ -85,85 +93,59 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
       // If we have a cached item, check if it's expired
       if (this._map[key] && cacheExpiry) {
         if (this.expiryInterval === undefined || now < cacheExpiry.getTime() + this.expiryInterval) {
-          delete this.loading[key] // Clear loading state for cached hits
+          delete this.loadingStates[key]
           return this._map[key]
         }
       }
 
-      // If already loading, return existing promise
-      if (this.loading[key] && this.loading[key] instanceof Promise) {
-        return this.loading[key] as Promise<V | undefined>
-      }
-
-      // Normal loading for non-cached items
+      // Create and store the loading promise
       const loadPromise = this.loadOne(key).then((result: V | undefined) => {
         if (result) {
           this.set(key, result)
           this.refreshedAtMap[key] = new Date()
         }
-        delete this.loading[key]
-        this._updateLoadingStatus()
         return result
-      }).catch((error) => {
-        delete this.loading[key]
-        this._updateLoadingStatus()
-        throw error
       })
 
       this.loading[key] = loadPromise
-      return loadPromise
+      return await loadPromise
     } finally {
+      delete this.loadingStates[key]
+      delete this.loading[key]
       this.isLoading.loadingBy = LoadingState.LOADED
       this.hasLoadedOnce.loadingBy = LoadingState.LOADED
-      this._updateLoadingStatus()
+      this.updateLoadingStatus()
     }
   }
 
-  public async getAll(refresh?: boolean): Promise<Record<string, V> | undefined> {
+  public override async getAll(refresh?: boolean): Promise<Record<string, V> | undefined> {
     try {
       this.isLoading.all = LoadingState.LOADING
-      this._updateLoadingStatus()
-
-      if (this.loadingAll && !refresh) {
-        return this.loadingAll
-      }
+      this.updateLoadingStatus()
 
       if (!refresh && Object.keys(this._map).length > 0) {
         return this._map
       }
 
-      const loadAllPromise = new Promise<Record<string, V> | undefined>(async (resolve) => {
-        if (!this.loadAll) {
-          throw new Error("Load all items function is not defined")
-        }
-
-        try {
-          const result = await this.loadAll()
-          const processedResult = await this.processLoadResult(result)
-          Object.keys(processedResult).forEach((key) => {
-            this.refreshedAtMap[key] = new Date()
-          })
-          resolve(processedResult)
-        } catch (error) {
-          console.error(error)
-          resolve(undefined)
-        }
-      })
-
-      this.loadingAll = loadAllPromise
-      return await loadAllPromise
+      const result = await super.getAll(refresh)
+      if (result) {
+        Object.keys(result).forEach(key => {
+          this.refreshedAtMap[key] = new Date()
+        })
+      }
+      return result
     } finally {
-      this.loadingAll = undefined
       this.isLoading.all = LoadingState.LOADED
       this.hasLoadedOnce.all = LoadingState.LOADED
-      this._updateLoadingStatus()
+      this.updateLoadingStatus()
     }
   }
 
-  public async getBy(propName: string, value: any): Promise<V | undefined> {
+  public override async getBy(propName: string, value: any): Promise<V | undefined> {
     try {
+      this.loadingStates[`by:${propName}:${value}`] = true
       this.isLoading.loadingBy = LoadingState.LOADING
-      this._updateLoadingStatus()
+      this.updateLoadingStatus()
 
       const result = await super.getBy(propName, value)
       if (result) {
@@ -171,73 +153,53 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
       }
       return result
     } finally {
+      delete this.loadingStates[`by:${propName}:${value}`]
       this.isLoading.loadingBy = LoadingState.LOADED
       this.hasLoadedOnce.loadingBy = LoadingState.LOADED
-      this._updateLoadingStatus()
+      this.updateLoadingStatus()
     }
   }
 
-  private async processLoadResult(result: V[] | Record<string, V>): Promise<Record<string, V>> {
-    if (Array.isArray(result)) {
-      result.forEach((item) => {
-        if (item) {
-          const key = item[this.keyProperty]
-          this._map[key] = item
-          this.refreshedAtMap[key] = new Date()
-        }
-      })
-    } else {
-      Object.entries(result).forEach(([key, value]) => {
-        this._map[key] = value
-        this.refreshedAtMap[key] = new Date()
-      })
+  public override set(key: string, value: V): this {
+    if (value === undefined) {
+      return this
     }
-    this._updateLoadingStatus()
-    return this._map
-  }
 
-  public set(key: string, value: V) {
     super.set(key, value)
     this.refreshedAtMap[key] = new Date()
-    this._updateLoadingStatus()
+    this.updateLoadingStatus()
     return this
   }
 
-  delete(key: string): boolean {
-    if (!super.has(key)) {
-      return false
-    }
-
-    if (this.refreshedAtMap[key]) {
+  public override delete(key: string): boolean {
+    const hadKey = super.delete(key)
+    if (hadKey) {
       delete this.refreshedAtMap[key]
+      delete this.loadingStates[key]
+      this.updateLoadingStatus()
     }
-    const result = super.delete(key)
-    this._updateLoadingStatus()
-    return result
+    return hadKey
   }
 
-  deleteBy(propName: string, value: any): boolean {
-    const result = super.deleteBy(propName, value)
-    if (result) {
-      delete this.refreshedAtMap[value]
+  public override deleteBy(propName: string, value: any): boolean {
+    const item = Object.values(this._map).find(item => item[propName] === value)
+    if (item) {
+      const key = item[this.keyProperty]
+      return this.delete(key)
     }
-    this._updateLoadingStatus()
-    return result
+    return false
   }
 
-  public clear(): void {
+  public override clear(): void {
     super.clear()
     this.refreshedAtMap = {}
     this._cachedQueryData = {}
-    this._updateLoadingStatus()
+    this.loadingStates = {}
+    this.updateLoadingStatus()
   }
 
-  private _updateLoadingStatus() {
-    // Update global loading state based on all operations
-    const hasAnyLoading =
-      Object.values(this.loading).some(val => val === true || val instanceof Promise) ||
-      Object.keys(this.loadingQuery).length > 0 ||
-      this.loadingAll !== undefined;
+  private updateLoadingStatus(): void {
+    const hasAnyLoading = Object.values(this.loadingStates).some(Boolean)
 
     if (hasAnyLoading) {
       this.isLoading.all = LoadingState.LOADING
@@ -245,8 +207,7 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
       this.isLoading.all = LoadingState.LOADED
     }
 
-    // Ensure hasLoadedOnce is set properly
-    if (this.hasLoadedOnce.all !== LoadingState.LOADED && Object.keys(this._map).length > 0) {
+    if (Object.keys(this._map).length > 0) {
       this.hasLoadedOnce.all = LoadingState.LOADED
     }
 
