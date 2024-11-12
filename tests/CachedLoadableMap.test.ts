@@ -1,4 +1,5 @@
-import { CachedLoadableMap, LoadingState } from "../src/CachedLoadableMap"
+import { CachedLoadableMap } from "../src/CachedLoadableMap"
+import { LoadingState } from "../src"
 
 describe("CachedLoadableMap", () => {
   let cachedMap: CachedLoadableMap<string, { _id: string, data: string }>
