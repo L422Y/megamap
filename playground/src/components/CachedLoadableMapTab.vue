@@ -1,170 +1,197 @@
 <template>
   <div class="bg-white rounded-lg shadow p-6">
     <div class="flex items-center gap-2 mb-4">
-      <h2 class="text-xl font-semibold">CachedLoadableMap Features</h2>
+      <h2 class="text-xl font-semibold">CachedLoadableMap Demo</h2>
     </div>
 
-    <div class="space-y-4">
-      <!-- Controls -->
-      <div class="flex items-center gap-2">
-        <button
-          @click="loadCachedItem"
-          :disabled="cachedMap.isLoading.all"
-          class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
-        >
-          Load Random Item
-        </button>
-        <button
-          @click="loadSameItem"
-          :disabled="!currentItem"
-          class="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:opacity-50"
-        >
-          Reload Same Item
-        </button>
-        <button
-          @click="clearCache"
-          class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-        >
-          Clear Cache
-        </button>
-        <div class="text-sm text-gray-500">
-          Cache Size: {{ Object.keys(cachedMap.value).length }} items
+    <div class="flex h-[500px] gap-4">
+      <!-- List Panel -->
+      <div class="w-1/3 border rounded-lg overflow-hidden">
+        <div class="p-4 bg-gray-50 border-b">
+          <h3 class="font-medium">Posts</h3>
+          <p class="text-sm text-gray-500">Cache expires after 5 seconds</p>
+          <div class="mt-2">
+            <span :class="[
+              'px-2 py-1 rounded-full text-sm font-medium',
+              cachedMap.isLoading.all === LoadingState.LOADING ? 'bg-yellow-100 text-yellow-800' :
+              cachedMap.hasLoadedOnce.all === LoadingState.LOADED ? 'bg-green-100 text-green-800' :
+              'bg-gray-100 text-gray-800'
+            ]">
+              {{ getLoadingStateText(cachedMap.isLoading.all) }}
+            </span>
+          </div>
+        </div>
+        <div class="overflow-y-auto h-[calc(100%-6rem)]">
+          <div v-for="id in postIds"
+               :key="id"
+               :class="[
+                 'p-4 border-b cursor-pointer hover:bg-gray-50',
+                 selectedId === id ? 'bg-blue-50' : ''
+               ]"
+               @click="selectPost(id)">
+            <div class="flex justify-between items-center">
+              <div class="font-medium">Post {{ id }}</div>
+              <span v-if="cachedMap.loading[id]"
+                    class="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">
+                Updating...
+              </span>
+            </div>
+            <div class="text-sm text-gray-500">
+              {{ getCacheStatus(id) }}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-4">
-        <!-- Current Item Display -->
-        <div class="space-y-2">
-          <h3 class="font-semibold">Current Item</h3>
-          <div v-if="currentItem" class="p-4 bg-gray-50 rounded">
-            <div class="flex justify-between mb-2 text-sm">
+      <!-- Detail Panel -->
+      <div class="flex-1 border rounded-lg overflow-hidden">
+        <div class="p-4 bg-gray-50 border-b flex justify-between items-center">
+          <h3 class="font-medium">Post Details</h3>
+          <div class="flex items-center gap-2">
+<!--            &lt;!&ndash; Global Loading State &ndash;&gt;-->
+<!--            <span :class="[-->
+<!--              'px-2 py-1 rounded-full text-sm font-medium',-->
+<!--              cachedMap.isLoading.all === LoadingState.LOADING ? 'bg-yellow-100 text-yellow-800' :-->
+<!--              cachedMap.hasLoadedOnce.all === LoadingState.LOADED ? 'bg-green-100 text-green-800' :-->
+<!--              'bg-gray-100 text-gray-800'-->
+<!--            ]">-->
+<!--              {{ getLoadingStateText(cachedMap.isLoading.all) }}-->
+<!--            </span>-->
+
+            <!-- Individual Item Loading State -->
+            <template v-if="selectedId">
               <span :class="[
-                'px-2 py-1 rounded-full font-medium',
-                lastRequestType === 'cache' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                'px-2 py-1 rounded-full text-sm font-medium',
+                cachedMap.loading[selectedId] ? 'bg-yellow-100 text-yellow-800' :
+                currentItem ? 'bg-green-100 text-green-800' :
+                'bg-gray-100 text-gray-800'
               ]">
-                {{ lastRequestType === 'cache' ? 'Cache Hit' : 'Network Request' }}
+                {{
+                  cachedMap.loading[selectedId] ? "Updating..." :
+                      currentItem ? "Loaded" : "Not Loaded"
+                }}
               </span>
-              <span class="text-gray-500">
-                Time: {{ lastRequestTime }}ms
+
+              <!-- Cache Status -->
+              <span v-if="currentItem" class="text-sm text-gray-500">
+                <template v-if="expiryTime > 0">
+                  Expires in: {{ expiryTime }}s
+                </template>
+                <template v-else>
+                  Expired (will refresh on next access)
+                </template>
               </span>
-            </div>
-            <div v-if="getCacheExpiryTime() > 0" class="mb-2 text-sm text-gray-500">
-              Cache expires in: {{ getCacheExpiryTime() }}s
-            </div>
-            <pre class="text-sm">{{ JSON.stringify(currentItem, null, 2) }}</pre>
+            </template>
           </div>
         </div>
 
-        <!-- Request History -->
-        <div class="space-y-2">
-          <h3 class="font-semibold">Request History</h3>
-          <div class="bg-gray-50 rounded p-4 max-h-96 overflow-y-auto">
-            <div v-for="(request, index) in requestHistory"
-                 :key="index"
-                 class="mb-2 p-2 border-b border-gray-200 last:border-0">
-              <div class="flex justify-between items-center mb-1">
-                <span :class="[
-                  'px-2 py-0.5 rounded-full text-sm font-medium',
-                  request.type === 'cache' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                ]">
-                  {{ request.type === 'cache' ? 'Cache Hit' : 'Network Request' }}
-                </span>
-                <span class="text-sm text-gray-500">
-                  {{ request.time }}ms
-                </span>
-              </div>
-              <div class="text-sm text-gray-600">
-                ID: {{ request.itemId }}
-              </div>
-              <div class="text-xs text-gray-500">
-                {{ new Date(request.timestamp).toLocaleTimeString() }}
-              </div>
-            </div>
-          </div>
+        <div v-if="currentItem" class="p-4">
+          <pre class="whitespace-pre-wrap">{{ JSON.stringify(currentItem, null, 2) }}</pre>
+        </div>
+        <div v-else-if="cachedMap.loading[selectedId]" class="p-4 text-gray-500">
+          Loading post details...
+        </div>
+        <div v-else class="p-4 text-gray-500">
+          Select a post to view details
         </div>
       </div>
+    </div>
+
+    <div class="mt-4 flex gap-2">
+      <button
+          class="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+          @click="clearCache"
+      >
+        Clear Cache
+      </button>
+      <button
+          :disabled="!selectedId || cachedMap.loading[selectedId]"
+          class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+          @click="refreshCurrentItem"
+      >
+        Force Refresh
+      </button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { CachedLoadableMap } from "megamap"
-import { ref, onMounted, defineModel } from "vue"
+import { ref, onMounted, onUnmounted, defineModel, computed } from "vue"
+import { LoadingState } from "megamap"
 
-const cachedMap = defineModel("cachedMap", {
-  type: CachedLoadableMap,
-  required: true
-})
-
+const cachedMap = defineModel("cachedMap", {required: true})
 const currentItem = ref(null)
-const lastRequestTime = ref(0)
-const lastRequestType = ref(null)
-const requestHistory = ref([])
+const selectedId = ref(null)
+const now = ref(Date.now())
 
-async function loadCachedItem() {
-  const randomId = `key${Math.floor(Math.random() * 50) + 1}`
-  await loadItem(randomId)
+// Generate a list of post IDs
+const postIds = computed(() =>
+  Array.from({length: 10}, (_, i) => `key${i + 1}`)
+)
+
+function getLoadingStateText(state) {
+ switch (state) {
+  case LoadingState.LOADING:
+   return "Updating..."
+  case LoadingState.LOADED:
+   return "Loaded"
+  case LoadingState.NOT_LOADED:
+   return "Not Loaded"
+  default:
+   return "Unknown"
+ }
 }
 
-async function loadSameItem() {
-  if (currentItem.value) {
-    await loadItem(currentItem.value._id)
-  }
+function getCacheStatus(id) {
+ const refreshedAt = cachedMap.value.getRefreshedAt(id)
+ if (!refreshedAt) return "Not cached"
+ return `Cached at ${refreshedAt.toLocaleTimeString()}`
 }
 
-async function loadItem(itemId) {
-  const startTime = performance.now()
+async function selectPost(id) {
+ selectedId.value = id
+ try {
+  currentItem.value = await cachedMap.value.get(id)
+ } catch (error) {
+  console.error("Error loading post:", error)
+  currentItem.value = null
+ }
+}
 
-  // Check if item exists in cache and isn't expired before loading
-  const cacheExpiry = cachedMap.value.getRefreshedAt(itemId)
-  const now = Date.now()
-  const isInCache = cacheExpiry && (now < cacheExpiry.getTime() + 5000)
-
-  const result = await cachedMap.value.get(itemId)
-  const requestTime = Math.round(performance.now() - startTime)
-
-  // Update current state
-  currentItem.value = result
-  lastRequestTime.value = requestTime
-  lastRequestType.value = isInCache ? 'cache' : 'network'
-
-  // Add to history
-  requestHistory.value.unshift({
-    itemId,
-    type: isInCache ? 'cache' : 'network',
-    time: requestTime,
-    timestamp: Date.now()
-  })
-
-  // Keep history at a reasonable size
-  if (requestHistory.value.length > 10) {
-    requestHistory.value.pop()
-  }
+async function refreshCurrentItem() {
+ if (selectedId.value && !cachedMap.value.loading[selectedId.value]) {
+  cachedMap.value.delete(selectedId.value)
+  await selectPost(selectedId.value)
+ }
 }
 
 function clearCache() {
-  cachedMap.value.clear()
-  requestHistory.value = []
-  currentItem.value = null
-  lastRequestTime.value = 0
-  lastRequestType.value = null
+ cachedMap.value.clear()
+ currentItem.value = null
 }
 
-function getCacheExpiryTime() {
+const expiryTime = computed(() => {
  if (!currentItem.value?._id) return 0
  const refreshedAt = cachedMap.value.getRefreshedAt(currentItem.value._id)
  if (!refreshedAt) return 0
- return Math.max(0, Math.ceil((refreshedAt.getTime() + 5000 - Date.now()) / 1000))
-}
+ return Math.max(0, Math.ceil((refreshedAt.getTime() + 5000 - now.value) / 1000))
+})
 
+// Set up timer for cache expiry countdown
+let interval
 onMounted(() => {
+ // Initialize data
  cachedMap.value.getAll()
+
+ // Start the countdown timer
+ interval = setInterval(() => {
+  now.value = Date.now()
+ }, 1000)
+})
+
+onUnmounted(() => {
+ if (interval) {
+  clearInterval(interval)
+ }
 })
 </script>
-
-<style scoped>
-pre {
-    white-space: pre-wrap;
-    word-wrap: break-word;
-}
-</style>
