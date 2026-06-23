@@ -54,7 +54,7 @@ describe("CachedLoadableMap", () => {
       // First call should execute the query
       await cachedMap.query[queryName](...args)
       expect(mockQueryFunction).toHaveBeenCalledTimes(1)
-      expect(mockQueryFunction).toHaveBeenCalledWith(queryName, ...args)
+      expect(mockQueryFunction).toHaveBeenCalledWith(...args)
 
       // Second call should use cache
       mockQueryFunction.mockClear()
@@ -65,7 +65,7 @@ describe("CachedLoadableMap", () => {
       jest.advanceTimersByTime(expiryInterval + 100)
       await cachedMap.query[queryName](...args)
       expect(mockQueryFunction).toHaveBeenCalledTimes(1)
-      expect(mockQueryFunction).toHaveBeenCalledWith(queryName, ...args)
+      expect(mockQueryFunction).toHaveBeenCalledWith(...args)
     }, 10000)
 
     test("should not share cache between different query args", async () => {
@@ -73,19 +73,19 @@ describe("CachedLoadableMap", () => {
 
       // First query
       await cachedMap.query[queryName]("arg1")
-      expect(mockQueryFunction).toHaveBeenCalledWith(queryName, "arg1")
+      expect(mockQueryFunction).toHaveBeenCalledWith("arg1")
 
       // Different args should execute new query
       mockQueryFunction.mockClear()
       await cachedMap.query[queryName]("arg2")
-      expect(mockQueryFunction).toHaveBeenCalledWith(queryName, "arg2")
+      expect(mockQueryFunction).toHaveBeenCalledWith("arg2")
     })
 
     test("should handle empty args", async () => {
       const queryName = "testQuery"
 
       await cachedMap.query[queryName]()
-      expect(mockQueryFunction).toHaveBeenCalledWith(queryName)
+      expect(mockQueryFunction).toHaveBeenCalledWith()
 
       mockQueryFunction.mockClear()
       await cachedMap.query[queryName]()

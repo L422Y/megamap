@@ -60,7 +60,7 @@ export class CachedLoadableMap<K, V extends Record<string, any>> extends Loadabl
         }
       }
 
-      const promise = this._namedQueries[queryName](queryName, ...args).then((result: V | V[]) => {
+      const promise = this._namedQueries[queryName](...args).then((result: V | V[]) => {
         this._cachedQueryData[queryKey] = result
         this.refreshedAtMap[queryKey] = new Date()
         delete this.loadingQuery[queryKey]
