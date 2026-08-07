@@ -24,16 +24,16 @@ export enum LoadingState {
 export class LoadableMap<K extends string, V extends RefreshableRecord> {
   readonly [Symbol.toStringTag]: string = "LoadableMap"
   keyProperty: string
-  public readonly isLoading = {
+  public readonly isLoading = this._reactiveState({
     all: LoadingState.NOT_LOADED,
     loadingBy: LoadingState.NOT_LOADED,
     loadingQuery: LoadingState.NOT_LOADED
-  }
-  public readonly hasLoadedOnce = {
+  })
+  public readonly hasLoadedOnce = this._reactiveState({
     all: LoadingState.NOT_LOADED,
     loadingBy: LoadingState.NOT_LOADED,
     loadingQuery: LoadingState.NOT_LOADED
-  }
+  })
   protected _map: Record<K, V> = {} as Record<K, V>
   protected loading: Record<K, Promise<V | undefined>> = {} as Record<K, Promise<V | undefined>>
   protected loadingQuery: Record<string, Promise<V | V[] | undefined>> = {} as Record<string, Promise<V | V[] | undefined>>
@@ -51,6 +51,20 @@ export class LoadableMap<K extends string, V extends RefreshableRecord> {
 
 
   private eventListeners: Record<string, Function[]> = {}
+
+  /**
+   * Hook that lets a subclass make an internal state object observable.
+   * The base implementation is the identity function, so `LoadableMap` stays
+   * framework-free; `ReactiveMegaMap` overrides it with Vue's `shallowReactive`.
+   *
+   * This is called from property initializers (which run before any subclass
+   * constructor body), so implementations must not read instance state.
+   * @param obj
+   * @protected
+   */
+  protected _reactiveState<T extends object>(obj: T): T {
+    return obj
+  }
 
   constructor(opts: LoadableMapOptions<K, V>) {
     if (!opts.loadOne) {

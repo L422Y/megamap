@@ -74,6 +74,9 @@ const reactivePosts = new ReactiveMegaMap({
 
 // Now it's Vue reactive - changes trigger component updates
 reactivePosts.set('123', { title: 'Updated' })
+
+// ...and you can subscribe to a single record instead of the whole map
+const post = reactivePosts.itemRef('123')  // ShallowRef<Post | undefined>
 ```
 
 ## Vue.js Example
@@ -170,6 +173,8 @@ MegaMap provides a suite of TypeScript classes for advanced key-value mapping, e
 4. **ReactiveMegaMap**: A specialized version of MegaMap designed for reactive frameworks like Vue.js. It offers:
     - All MegaMap features.
     - Reactive map properties, enabling seamless integration with reactive UI components.
+    - Granular, per-record subscriptions via `itemRef(key)` — see
+      [Granular reactivity](#granular-reactivity).
 
 ## Installation
 
@@ -215,8 +220,9 @@ We'll refer to these functions in the examples below.
 
 ### `MegaMap`/`ReactiveMegaMap` Classes
 
-Currently, these two classes are almost identical. The only difference is that `ReactiveMegaMap` uses Vue `reactive`
-properties, which enables reactivity for the sub-lists inside components/templates.
+Currently, these two classes are almost identical. The difference is that `ReactiveMegaMap` publishes its changes
+through Vue shallow refs, which enables reactivity for the sub-lists inside components/templates. See
+[Granular reactivity](#granular-reactivity) for what notifies what.
 
 For `MegaMap`:
 
@@ -286,6 +292,51 @@ and for `ReactiveMegaMap` in Vue:
    }, 1000)
 
 </script>
+```
+
+### Granular reactivity
+
+`ReactiveMegaMap` does **not** wrap its records in a deep `reactive()` proxy. Records are stored exactly as you pass
+them in, and updates are published by triggering shallow refs. Two consequences:
+
+- Record identity is preserved — `megaMap.value[key] === theObjectYouPassedIn` — and Vue never walks your records.
+- Mutating a record in place is invisible to Vue. Either `set()` the record again, or call `touch(key)`.
+
+There are three levels to subscribe at, from most to least granular:
+
+| Subscription | Notifies when |
+|---|---|
+| `megaMap.itemRef(key)` | that one record is set, touched, deleted, or replaced by a reload |
+| `megaMap.subLists.<name>` | that list's membership or contents change |
+| `megaMap.value` / `megaMap.mapRef` | any record is added, removed, or replaced |
+
+Prefer `itemRef()` for per-record components — iterating `megaMap.value` is the coarse option, and re-runs on every
+change anywhere in the map.
+
+```vue
+<template>
+   <article v-if="post">{{ post.title }}</article>
+</template>
+<script setup>
+   import { ReactiveMegaMap } from "megamap"
+
+   const props = defineProps({postId: String, megaMap: ReactiveMegaMap})
+
+   // a stable ref for this record only - safe to take before it has loaded
+   const post = props.megaMap.itemRef(props.postId)
+   props.megaMap.get(props.postId)
+</script>
+```
+
+Refs are created on first request and kept for the lifetime of the map, so a component holding one keeps working if
+the key is deleted and later re-loaded (the ref reads `undefined` in between).
+
+When you mutate a record in place, announce it:
+
+```typescript
+const post = megaMap.value["123"]
+post.status = "published"
+megaMap.touch("123")  // fires that record's ref, the map ref, and any affected sub-list
 ```
 
 ## Additional Classes
