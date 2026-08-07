@@ -90,7 +90,9 @@ export class ReactiveMegaMap<K, V extends Record<string, any>> extends MegaMap<K
   async init(opts: MegaMapOptions<string, V>) {
     this._mapRef = shallowRef(this._map)
     this._itemRefs = new Map()
-    this._subLists = shallowReactive({})
+    // The type argument is required: inferring it from `{}` resolves to
+    // `ShallowReactive<{}>`, which drops the index signature.
+    this._subLists = shallowReactive<Record<string, V[]>>({})
 
     for (const filterKey in this._subListFilters) {
       this._subLists[filterKey] = []
